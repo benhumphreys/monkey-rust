@@ -1,8 +1,8 @@
 #![allow(dead_code)]
 
-use crate::token;
-use crate::token::Token;
+use crate::token::{Token, TokenType};
 
+#[derive(Clone)]
 pub struct Lexer {
     input: String,
     position: usize,
@@ -34,40 +34,40 @@ impl Lexer {
             '=' => {
                 if self.peek_char() == '=' {
                     self.read_char();
-                    Token::new(token::EQ, "==")
+                    Token::new(TokenType::Eq, "==")
                 } else {
-                    Token::new(token::ASSIGN, self.ch.to_string().as_str())
+                    Token::new(TokenType::Assign, self.ch.to_string().as_str())
                 }
             }
-            '(' => Token::new(token::LPAREN, self.ch.to_string().as_str()),
-            ')' => Token::new(token::RPAREN, self.ch.to_string().as_str()),
-            ',' => Token::new(token::COMMA, self.ch.to_string().as_str()),
+            '(' => Token::new(TokenType::LeftParen, self.ch.to_string().as_str()),
+            ')' => Token::new(TokenType::RightParen, self.ch.to_string().as_str()),
+            ',' => Token::new(TokenType::Comma, self.ch.to_string().as_str()),
             '!' => {
-               if self.peek_char() == '=' {
-                   self.read_char();
-                   Token::new(token::NOT_EQ, "!=")
-               } else {
-                   Token::new(token::BANG, self.ch.to_string().as_str())
-               }
+                if self.peek_char() == '=' {
+                    self.read_char();
+                    Token::new(TokenType::NotEq, "!=")
+                } else {
+                    Token::new(TokenType::Bang, self.ch.to_string().as_str())
+                }
             }
-            '+' => Token::new(token::PLUS, self.ch.to_string().as_str()),
-            '-' => Token::new(token::MINUS, self.ch.to_string().as_str()),
-            '*' => Token::new(token::ASTERISK, self.ch.to_string().as_str()),
-            '/' => Token::new(token::SLASH, self.ch.to_string().as_str()),
-            '<' => Token::new(token::LT, self.ch.to_string().as_str()),
-            '>' => Token::new(token::GT, self.ch.to_string().as_str()),
-            '{' => Token::new(token::LBRACE, self.ch.to_string().as_str()),
-            '}' => Token::new(token::RBRACE, self.ch.to_string().as_str()),
-            ';' => Token::new(token::SEMICOLON, self.ch.to_string().as_str()),
-            '\0' => Token::new(token::END_OF_FILE, self.ch.to_string().as_str()),
+            '+' => Token::new(TokenType::Plus, self.ch.to_string().as_str()),
+            '-' => Token::new(TokenType::Minus, self.ch.to_string().as_str()),
+            '*' => Token::new(TokenType::Asterisk, self.ch.to_string().as_str()),
+            '/' => Token::new(TokenType::Slash, self.ch.to_string().as_str()),
+            '<' => Token::new(TokenType::LessThan, self.ch.to_string().as_str()),
+            '>' => Token::new(TokenType::GreaterThan, self.ch.to_string().as_str()),
+            '{' => Token::new(TokenType::LeftBrace, self.ch.to_string().as_str()),
+            '}' => Token::new(TokenType::RightBrace, self.ch.to_string().as_str()),
+            ';' => Token::new(TokenType::SemiColon, self.ch.to_string().as_str()),
+            '\0' => Token::new(TokenType::EOF, self.ch.to_string().as_str()),
             _ => {
                 return if is_letter(self.ch) {
                     let ident = self.read_identifier();
                     Token::new(lookup_ident(ident.as_str()), ident.as_str())
                 } else if is_digit(self.ch) {
-                    Token::new(token::INT, self.read_number().as_str())
+                    Token::new(TokenType::Int, self.read_number().as_str())
                 } else {
-                    Token::new(token::ILLEGAL, self.ch.to_string().as_str())
+                    Token::new(TokenType::Illegal, self.ch.to_string().as_str())
                 }
             }
         };
@@ -118,16 +118,16 @@ impl Lexer {
     }
 }
 
-fn lookup_ident(str: &str) -> &str {
+fn lookup_ident(str: &str) -> TokenType {
     match str {
-        "fn" => token::FUNCTION,
-        "let" => token::LET,
-        "true" => token::TRUE,
-        "false" => token::FALSE,
-        "if" => token::IF,
-        "else" => token::ELSE,
-        "return" => token::RETURN,
-        _ => token::IDENT,
+        "fn" => TokenType::Function,
+        "let" => TokenType::Let,
+        "true" => TokenType::True,
+        "false" => TokenType::False,
+        "if" => TokenType::If,
+        "else" => TokenType::Else,
+        "return" => TokenType::Return,
+        _ => TokenType::Ident,
     }
 }
 

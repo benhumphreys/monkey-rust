@@ -1,66 +1,72 @@
 #![allow(dead_code)]
 
-pub type TokenType = String;
+use std::fmt::{Display, Formatter};
 
-#[derive(Eq, Debug)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub struct Token {
     pub token_type: TokenType,
     pub literal: String,
 }
 
 impl Token {
-    pub fn new(token_type: &str, literal: &str) -> Token {
+    pub fn new(token_type: TokenType, literal: &str) -> Token {
         Token {
-            token_type: TokenType::from(token_type),
+            token_type: token_type,
             literal: String::from(literal),
         }
     }
 }
 
-impl PartialEq for Token {
-    fn eq(&self, other: &Self) -> bool {
-        self.token_type == other.token_type && self.literal == other.literal
+impl Display for Token {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "({}, {})", self.token_type, self.literal)
     }
 }
 
-//
-// Token types
-//
-pub const ILLEGAL: &'static str = "ILLEGAL";
-pub const END_OF_FILE: &'static str = "END_OF_FILE";
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum TokenType {
+    Illegal,
+    EOF,
 
-// Identifiers and literals
-pub const IDENT: &'static str = "IDENT"; // add, foobar, x, y, ..
-pub const INT: &'static str = "INT"; // 1, 2, 3, ..
+    // Identifiers and literals
+    Ident,
+    Int,
 
-// Operators
-pub const ASSIGN: &'static str = "=";
-pub const PLUS: &'static str = "+";
-pub const MINUS: &'static str = "-";
-pub const BANG: &'static str = "!";
-pub const ASTERISK: &'static str = "*";
-pub const SLASH: &'static str = "/";
+    // Operators
+    Assign,
+    Plus,
+    Minus,
+    Bang,
+    Asterisk,
+    Slash,
 
-pub const LT: &'static str = "<";
-pub const GT: &'static str = ">";
+    LessThan,
+    GreaterThan,
 
-pub const EQ: &'static str = "==";
-pub const NOT_EQ: &'static str = "!=";
+    Eq,
+    NotEq,
 
-// Delimiters
-pub const COMMA: &'static str = ",";
-pub const SEMICOLON: &'static str = ";";
+    // Delimiters
+    Comma,
+    SemiColon,
 
-pub const LPAREN: &'static str = "(";
-pub const RPAREN: &'static str = "(";
-pub const LBRACE: &'static str = "{";
-pub const RBRACE: &'static str = "}";
+    LeftParen,
+    RightParen,
+    LeftBrace,
+    RightBrace,
 
-// Keywords
-pub const FUNCTION: &'static str = "FUNCTION";
-pub const LET: &'static str = "LET";
-pub const TRUE: &'static str = "TRUE";
-pub const FALSE: &'static str = "FALSE";
-pub const IF: &'static str = "IF";
-pub const ELSE: &'static str = "ELSE";
-pub const RETURN: &'static str = "RETURN";
+    // Keywords
+    Function,
+    Let,
+    True,
+    False,
+    If,
+    Else,
+    Return,
+}
+
+impl Display for TokenType {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?}", self)
+    }
+}
