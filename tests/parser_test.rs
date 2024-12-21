@@ -15,11 +15,32 @@ fn test_let_statements() {
     let mut lexer = Lexer::new(code.to_string());
     let mut parser = Parser::new(&mut lexer);
     let program = parser.parse_program();
-
     check_parser_errors(&mut parser);
 
     for i in 1..expected_identifiers.len() {
         verify_let_statement(&program.statements[i], expected_identifiers[i].to_string())
+    }
+}
+
+#[test]
+fn test_return_statements() {
+    let code = "return 5;\n\
+            return 10;\n\
+            return 993322;;\n";
+
+    let mut lexer = Lexer::new(code.to_string());
+    let mut parser = Parser::new(&mut lexer);
+    let program = parser.parse_program();
+    check_parser_errors(&mut parser);
+
+    assert_eq!(program.statements.len(), 3);
+
+    for stmt in program.statements {
+        if let Statement::ReturnStatement(token, _) = stmt {
+            assert_eq!(token.literal, "return")
+        } else {
+            panic!("Statement not ReturnStatement. Got={:?}", stmt)
+        }
     }
 }
 
@@ -41,6 +62,6 @@ fn verify_let_statement(actual: &Statement, name: String) {
         assert_eq!(actual.token_literal(), "let");
         assert_eq!(identifier.value, name);
     } else {
-        panic!("Expected LetStatement")
+        panic!("Statement not LetStatement. Got={:?}", actual)
     }
 }

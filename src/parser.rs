@@ -46,7 +46,7 @@ impl Parser {
         self.errors.clone()
     }
 
-    pub fn add_peak_error(&mut self, token_type: &TokenType) {
+    fn add_peak_error(&mut self, token_type: &TokenType) {
         let msg = format!(
             "expected next token to be {}, got {} instead",
             token_type, self.peek_token
@@ -62,6 +62,7 @@ impl Parser {
     fn parse_statement(&mut self) -> Option<Statement> {
         match self.cur_token.token_type {
             TokenType::Let => Some(self.parse_let_statement()?),
+            TokenType::Return => Some(self.parse_return_statement()?),
             _ => None, // TODO
         }
     }
@@ -88,6 +89,18 @@ impl Parser {
         }
 
         Some(Statement::LetStatement(token, name, Expression::Dummy))
+    }
+
+    fn parse_return_statement(&mut self) -> Option<Statement> {
+        let token = self.cur_token.clone();
+        self.next_token();
+
+        // TODO: We're skipping expressions until we encounter a semicolon
+        while !self.cur_token_is(&TokenType::SemiColon) {
+            self.next_token();
+        }
+
+        Some(Statement::ReturnStatement(token, Expression::Dummy))
     }
 
     fn cur_token_is(&self, token_type: &TokenType) -> bool {

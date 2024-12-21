@@ -40,10 +40,22 @@ impl Node for LetStatement {
     }
 }
 
+#[derive(Clone)]
+pub struct ReturnStatement {
+    token: Token,
+    return_value: Expression,
+}
+
+impl Node for ReturnStatement {
+    fn token_literal(&self) -> String {
+        self.token.literal.clone()
+    }
+}
+
 #[derive(Debug, Clone)]
 pub enum Statement {
     LetStatement(Token, Identifier, Expression),
-    Dummy, // Remove this later
+    ReturnStatement(Token, Expression),
 }
 
 impl Node for Statement {
@@ -51,7 +63,7 @@ impl Node for Statement {
         use Statement::*;
         match self {
             LetStatement(token, _, _) => token.literal.clone(),
-            Dummy => "Remove later".to_string()
+            ReturnStatement(token, _) => token.literal.clone(),
         }
     }
 }
