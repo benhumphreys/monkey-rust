@@ -1,5 +1,6 @@
 #![allow(dead_code)]
 
+use monkey::ast::Expression::Identifier;
 use monkey::ast::{Node, Statement};
 use monkey::lexer::Lexer;
 use monkey::parser::Parser;
@@ -41,6 +42,30 @@ fn test_return_statements() {
         } else {
             panic!("Statement not ReturnStatement. Got={:?}", stmt)
         }
+    }
+}
+
+#[test]
+fn test_identifier_expression() {
+    let code = "foobar;";
+
+    let mut lexer = Lexer::new(code.to_string());
+    let mut parser = Parser::new(&mut lexer);
+    let program = parser.parse_program();
+    check_parser_errors(&mut parser);
+
+    assert_eq!(program.statements.len(), 1);
+
+    let stmt = program.statements[0].clone();
+    if let Statement::ExpressionStatement(_, expression) = stmt {
+        if let Identifier(token, value) = expression {
+            assert_eq!(token.literal, "foobar");
+            assert_eq!(value, "foobar");
+        } else {
+            panic!("Expression not Identifier. Got={:?}", expression);
+        }
+    } else {
+        panic!("Statement not ExpressionStatement. Got={:?}", stmt);
     }
 }
 

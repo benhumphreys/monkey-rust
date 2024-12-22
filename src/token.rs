@@ -23,7 +23,7 @@ impl Display for Token {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum TokenType {
     Illegal,
     EOF,
