@@ -1,10 +1,11 @@
 use crate::ast;
 use crate::ast::{Expression, Program};
 use crate::lexer::Lexer;
-use crate::token::TokenType::{Ident, SemiColon};
+use crate::token::TokenType::{Ident, Int, SemiColon};
 use crate::token::{Token, TokenType};
 use ast::Statement;
 use std::collections::HashMap;
+use std::num::ParseIntError;
 
 type ParseError = String;
 type PrefixParseFn = fn(&mut Parser) -> Expression;
@@ -43,6 +44,7 @@ impl Parser {
 
         // Register parsing functions
         p.register_prefix(Ident, Parser::parse_identifier);
+        p.register_prefix(Int, Parser::parse_integer_literal);
 
         // Populate cur_token and peek_token
         p.next_token();
@@ -84,6 +86,10 @@ impl Parser {
         self.errors.push(msg);
     }
 
+    fn add_error(&mut self, error: String) {
+        self.errors.push(error)
+    }
+
     fn next_token(&mut self) {
         self.cur_token = self.peek_token.clone();
         self.peek_token = self.lexer.next_token();
@@ -91,6 +97,19 @@ impl Parser {
 
     fn parse_identifier(&mut self) -> Expression {
         Expression::Identifier(self.cur_token.clone(), self.cur_token.literal.clone())
+    }
+
+    fn parse_integer_literal(&mut self) -> Expression {
+        let token = self.cur_token.clone();
+        let value = token.literal.parse::<i64>();
+
+        match value {
+            Ok(v) => Expression::IntegerLiteral(token, v),
+            Err(_) => {
+                self.add_error(format!("could not parse '{}' as integer", token.literal));
+               Expression::Nil
+            }
+        }
     }
 
     fn parse_statement(&mut self) -> Option<Statement> {
@@ -146,7 +165,7 @@ impl Parser {
             self.next_token();
         }
 
-        Some(Statement::LetStatement(token, name, Expression::Dummy))
+        Some(Statement::LetStatement(token, name, Expression::Nil))
     }
 
     fn parse_return_statement(&mut self) -> Option<Statement> {
@@ -158,7 +177,7 @@ impl Parser {
             self.next_token();
         }
 
-        Some(Statement::ReturnStatement(token, Expression::Dummy))
+        Some(Statement::ReturnStatement(token, Expression::Nil))
     }
 
     fn cur_token_is(&self, token_type: &TokenType) -> bool {

@@ -1,7 +1,6 @@
 #![allow(dead_code)]
 
-use monkey::ast::Expression::Identifier;
-use monkey::ast::{Node, Statement};
+use monkey::ast::{Expression, Node, Program, Statement};
 use monkey::lexer::Lexer;
 use monkey::parser::Parser;
 
@@ -12,11 +11,7 @@ fn test_let_statements() {
             let foobar = 838383;\n";
 
     let expected_identifiers = vec!["x", "y", "foobar"];
-
-    let mut lexer = Lexer::new(code.to_string());
-    let mut parser = Parser::new(&mut lexer);
-    let program = parser.parse_program();
-    check_parser_errors(&mut parser);
+    let program = parse_program(code);
 
     for i in 1..expected_identifiers.len() {
         verify_let_statement(&program.statements[i], expected_identifiers[i].to_string())
@@ -29,10 +24,7 @@ fn test_return_statements() {
             return 10;\n\
             return 993322;;\n";
 
-    let mut lexer = Lexer::new(code.to_string());
-    let mut parser = Parser::new(&mut lexer);
-    let program = parser.parse_program();
-    check_parser_errors(&mut parser);
+    let program = parse_program(code);
 
     assert_eq!(program.statements.len(), 3);
 
@@ -48,17 +40,13 @@ fn test_return_statements() {
 #[test]
 fn test_identifier_expression() {
     let code = "foobar;";
-
-    let mut lexer = Lexer::new(code.to_string());
-    let mut parser = Parser::new(&mut lexer);
-    let program = parser.parse_program();
-    check_parser_errors(&mut parser);
+    let program = parse_program(code);
 
     assert_eq!(program.statements.len(), 1);
 
     let stmt = program.statements[0].clone();
     if let Statement::ExpressionStatement(_, expression) = stmt {
-        if let Identifier(token, value) = expression {
+        if let Expression::Identifier(token, value) = expression {
             assert_eq!(token.literal, "foobar");
             assert_eq!(value, "foobar");
         } else {
@@ -67,6 +55,27 @@ fn test_identifier_expression() {
     } else {
         panic!("Statement not ExpressionStatement. Got={:?}", stmt);
     }
+}
+
+#[test]
+fn test_integer_literal_expression() {
+    let code = "5;";
+    let program = parse_program(code);
+
+    assert_eq!(program.statements.len(), 1);
+
+    let stmt = program.statements[0].clone();
+    if let Statement::ExpressionStatement(_, expression) = stmt {
+        if let Expression::IntegerLiteral(token, value) = expression {
+            assert_eq!(token.literal, "5");
+            assert_eq!(value, 5);
+        } else {
+            panic!("Expression not IntegerLiteral. Got={:?}", expression);
+        }
+    } else {
+        panic!("Statement not ExpressionStatement. Got={:?}", stmt);
+    }
+
 }
 
 fn check_parser_errors(parser: &mut Parser) {
@@ -82,6 +91,13 @@ fn check_parser_errors(parser: &mut Parser) {
     panic!("Failed due to parser errors")
 }
 
+fn parse_program(code: &str) -> Program {
+    let mut lexer = Lexer::new(String::from(code));
+    let mut parser = Parser::new(&mut lexer);
+    let program = parser.parse_program();
+    check_parser_errors(&mut parser);
+    program
+}
 fn verify_let_statement(actual: &Statement, name: String) {
     if let Statement::LetStatement(_token, identifier, _expression) = actual {
         assert_eq!(actual.token_literal(), "let");

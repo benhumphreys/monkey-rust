@@ -7,8 +7,9 @@ pub trait Node {
 
 #[derive(Debug, Clone)]
 pub enum Expression {
-    Dummy,
+    Nil, // TODO: Work out how to deal with this. It has been simply translated from the Go example
     Identifier(Token, String),
+    IntegerLiteral(Token, i64)
 }
 
 impl Node for Expression {
@@ -21,7 +22,8 @@ impl Display for Expression {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
             Expression::Identifier(_, value) => write!(f, "{}", value),
-            Expression::Dummy => write!(f, "DUMMY"),
+            Expression::IntegerLiteral(_, value) => write!(f, "{}", value),
+            Expression::Nil => write!(f, "Nil"),
         }
     }
 }
@@ -32,17 +34,30 @@ pub struct Identifier {
     pub value: String,
 }
 
+impl Display for Identifier {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.value)
+    }
+}
+
 impl Node for Identifier {
     fn token_literal(&self) -> String {
         self.token.literal.clone()
     }
 }
 
-impl Display for Identifier {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.value)
+impl Node for IntegerLiteral {
+    fn token_literal(&self) -> String {
+        self.token.literal.clone()
     }
 }
+
+#[derive(Debug, Clone)]
+pub struct IntegerLiteral {
+    pub token: Token,
+    pub value: i64
+}
+
 
 #[derive(Debug, Clone)]
 pub struct ExpressionStatement {
