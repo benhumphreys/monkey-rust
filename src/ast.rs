@@ -7,9 +7,10 @@ pub trait Node {
 
 #[derive(Debug, Clone)]
 pub enum Expression {
-    Nil, // TODO: Work out how to deal with this. It has been simply translated from the Go example
     Identifier(Token, String),
-    IntegerLiteral(Token, i64)
+    IntegerLiteral(Token, i64),
+    PrefixExpression(Token, String, Box<Expression>),
+    Nil, // TODO: Work out how to deal with this. It has been simply translated from the Go example
 }
 
 impl Node for Expression {
@@ -23,6 +24,9 @@ impl Display for Expression {
         match self {
             Expression::Identifier(_, value) => write!(f, "{}", value),
             Expression::IntegerLiteral(_, value) => write!(f, "{}", value),
+            Expression::PrefixExpression(_, operator, right) => {
+                write!(f, "({}{})", operator, right.to_string())
+            }
             Expression::Nil => write!(f, "Nil"),
         }
     }
@@ -55,9 +59,26 @@ impl Node for IntegerLiteral {
 #[derive(Debug, Clone)]
 pub struct IntegerLiteral {
     pub token: Token,
-    pub value: i64
+    pub value: i64,
 }
 
+pub struct PrefixExpression {
+    token: Token,
+    operator: String,
+    right: Box<Expression>,
+}
+
+impl Node for PrefixExpression {
+    fn token_literal(&self) -> String {
+        self.token.literal.clone()
+    }
+}
+
+impl Display for PrefixExpression {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "({}{})", self.operator, self.right.to_string())
+    }
+}
 
 #[derive(Debug, Clone)]
 pub struct ExpressionStatement {

@@ -1,7 +1,7 @@
 use crate::ast;
 use crate::ast::{Expression, Program};
 use crate::lexer::Lexer;
-use crate::token::TokenType::{Ident, Int, SemiColon};
+use crate::token::TokenType::{Bang, Ident, Int, Minus, SemiColon};
 use crate::token::{Token, TokenType};
 use ast::Statement;
 use std::collections::HashMap;
@@ -44,6 +44,8 @@ impl Parser {
         // Register parsing functions
         p.register_prefix(Ident, Parser::parse_identifier);
         p.register_prefix(Int, Parser::parse_integer_literal);
+        p.register_prefix(Bang, Parser::parse_prefix_expression);
+        p.register_prefix(Minus, Parser::parse_prefix_expression);
 
         // Populate cur_token and peek_token
         p.next_token();
@@ -58,7 +60,7 @@ impl Parser {
             let stmt = self.parse_statement();
             match stmt {
                 Ok(s) => program.statements.push(s),
-                Err(e) => self.errors.push(e)
+                Err(e) => self.errors.push(e),
             }
             self.next_token()
         }
@@ -91,7 +93,10 @@ impl Parser {
     }
 
     fn parse_identifier(&mut self) -> Result<Expression, ParseError> {
-        Ok(Expression::Identifier(self.cur_token.clone(), self.cur_token.literal.clone()))
+        Ok(Expression::Identifier(
+            self.cur_token.clone(),
+            self.cur_token.literal.clone(),
+        ))
     }
 
     fn parse_integer_literal(&mut self) -> Result<Expression, ParseError> {
@@ -100,7 +105,7 @@ impl Parser {
 
         match value {
             Ok(v) => Ok(Expression::IntegerLiteral(token, v)),
-            Err(_) => Err(format!("could not parse '{}' as integer", token.literal))
+            Err(_) => Err(format!("could not parse '{}' as integer", token.literal)),
         }
     }
 
@@ -117,8 +122,22 @@ impl Parser {
         if prefix.is_some() {
             prefix.unwrap()(self)
         } else {
-            Err(format!("no prefix parse function for {} found", self.cur_token.token_type))
+            Err(format!(
+                "no prefix parse function for {} found",
+                self.cur_token.token_type
+            ))
         }
+    }
+
+    fn parse_prefix_expression(&mut self) -> Result<Expression, ParseError> {
+        let token = self.cur_token.clone();
+        self.next_token();
+        let right = self.parse_expression(Precedence::Prefix)?;
+        Ok(Expression::PrefixExpression(
+            token.clone(),
+            token.literal,
+            Box::new(right),
+        ))
     }
 
     fn parse_expression_statement(&mut self) -> Result<Statement, ParseError> {
@@ -128,7 +147,6 @@ impl Parser {
         if self.peek_token_is(&SemiColon) {
             self.next_token();
         }
-
         Ok(Statement::ExpressionStatement(token, expression_statement))
     }
 
