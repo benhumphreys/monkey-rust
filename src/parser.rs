@@ -5,11 +5,10 @@ use crate::token::TokenType::{Ident, Int, SemiColon};
 use crate::token::{Token, TokenType};
 use ast::Statement;
 use std::collections::HashMap;
-use std::num::ParseIntError;
 
 type ParseError = String;
-type PrefixParseFn = fn(&mut Parser) -> Expression;
-type InfixParseFn = fn(&mut Parser, Expression) -> Expression;
+type PrefixParseFn = fn(&mut Parser) -> Result<Expression, ParseError>;
+type InfixParseFn = fn(&mut Parser, Expression) -> Result<Expression, ParseError>;
 
 #[repr(u8)]
 enum Precedence {
@@ -58,8 +57,8 @@ impl Parser {
         while self.cur_token.token_type != TokenType::EOF {
             let stmt = self.parse_statement();
             match stmt {
-                Some(x) => program.statements.push(x),
-                None => (),
+                Ok(s) => program.statements.push(s),
+                Err(e) => self.errors.push(e)
             }
             self.next_token()
         }
@@ -86,69 +85,58 @@ impl Parser {
         self.errors.push(msg);
     }
 
-    fn add_error(&mut self, error: String) {
-        self.errors.push(error)
-    }
-
     fn next_token(&mut self) {
         self.cur_token = self.peek_token.clone();
         self.peek_token = self.lexer.next_token();
     }
 
-    fn parse_identifier(&mut self) -> Expression {
-        Expression::Identifier(self.cur_token.clone(), self.cur_token.literal.clone())
+    fn parse_identifier(&mut self) -> Result<Expression, ParseError> {
+        Ok(Expression::Identifier(self.cur_token.clone(), self.cur_token.literal.clone()))
     }
 
-    fn parse_integer_literal(&mut self) -> Expression {
+    fn parse_integer_literal(&mut self) -> Result<Expression, ParseError> {
         let token = self.cur_token.clone();
         let value = token.literal.parse::<i64>();
 
         match value {
-            Ok(v) => Expression::IntegerLiteral(token, v),
-            Err(_) => {
-                self.add_error(format!("could not parse '{}' as integer", token.literal));
-               Expression::Nil
-            }
+            Ok(v) => Ok(Expression::IntegerLiteral(token, v)),
+            Err(_) => Err(format!("could not parse '{}' as integer", token.literal))
         }
     }
 
-    fn parse_statement(&mut self) -> Option<Statement> {
+    fn parse_statement(&mut self) -> Result<Statement, ParseError> {
         match self.cur_token.token_type {
-            TokenType::Let => Some(self.parse_let_statement()?),
-            TokenType::Return => Some(self.parse_return_statement()?),
-            _ => Some(self.parse_expression_statement()?),
+            TokenType::Let => self.parse_let_statement(),
+            TokenType::Return => self.parse_return_statement(),
+            _ => self.parse_expression_statement(),
         }
     }
 
-    fn parse_expression(&mut self, precedence: Precedence) -> Option<Expression> {
+    fn parse_expression(&mut self, precedence: Precedence) -> Result<Expression, ParseError> {
         let prefix = self.prefix_parse_fns.get(&self.cur_token.token_type);
         if prefix.is_some() {
-            Some(prefix.unwrap()(self))
+            prefix.unwrap()(self)
         } else {
-            None
+            Err(format!("no prefix parse function for {} found", self.cur_token.token_type))
         }
     }
 
-    fn parse_expression_statement(&mut self) -> Option<Statement> {
+    fn parse_expression_statement(&mut self) -> Result<Statement, ParseError> {
         let token = self.cur_token.clone();
-        let expression_statement = self.parse_expression(Precedence::Lowest);
-        match expression_statement {
-            Some(es) => {
-                if self.peek_token_is(&SemiColon) {
-                    self.next_token();
-                }
+        let expression_statement = self.parse_expression(Precedence::Lowest)?;
 
-                Some(Statement::ExpressionStatement(token, es))
-            }
-            None => None,
+        if self.peek_token_is(&SemiColon) {
+            self.next_token();
         }
+
+        Ok(Statement::ExpressionStatement(token, expression_statement))
     }
 
-    fn parse_let_statement(&mut self) -> Option<Statement> {
+    fn parse_let_statement(&mut self) -> Result<Statement, ParseError> {
         let token = self.cur_token.clone();
 
         if !self.expect_peek(&TokenType::Ident) {
-            return None;
+            return Err("no identifier in let statement".to_string());
         }
 
         let name = ast::Identifier {
@@ -157,7 +145,7 @@ impl Parser {
         };
 
         if !self.expect_peek(&TokenType::Assign) {
-            return None;
+            return Err("no assignment in let statement".to_string());
         }
 
         // TODO: We're skipping expressions until we encounter a semicolon
@@ -165,10 +153,10 @@ impl Parser {
             self.next_token();
         }
 
-        Some(Statement::LetStatement(token, name, Expression::Nil))
+        Ok(Statement::LetStatement(token, name, Expression::Nil))
     }
 
-    fn parse_return_statement(&mut self) -> Option<Statement> {
+    fn parse_return_statement(&mut self) -> Result<Statement, ParseError> {
         let token = self.cur_token.clone();
         self.next_token();
 
@@ -177,7 +165,7 @@ impl Parser {
             self.next_token();
         }
 
-        Some(Statement::ReturnStatement(token, Expression::Nil))
+        Ok(Statement::ReturnStatement(token, Expression::Nil))
     }
 
     fn cur_token_is(&self, token_type: &TokenType) -> bool {

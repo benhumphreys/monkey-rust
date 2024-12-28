@@ -22,7 +22,7 @@ fn test_let_statements() {
 fn test_return_statements() {
     let code = "return 5;\n\
             return 10;\n\
-            return 993322;;\n";
+            return 993322;\n";
 
     let program = parse_program(code);
 
