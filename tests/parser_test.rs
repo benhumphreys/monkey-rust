@@ -80,26 +80,87 @@ fn test_integer_literal_expression() {
 
 #[test]
 fn test_parsing_prefix_expressions() {
-    let test_cases = vec![("!5", "!", 5i64), ("-15", "-", 15i64)];
+    let test_cases = vec![("!5", "!", 5), ("-15", "-", 15)];
 
     for test_case in test_cases {
         let test_code = test_case.0;
-        let test_operator = test_case.1;
-        let test_int_value = test_case.2;
+        let expected_operator = test_case.1;
+        let expected_int_value = test_case.2;
 
         let program = parse_program(test_code);
         assert_eq!(program.statements.len(), 1);
         let stmt = program.statements[0].clone();
         if let Statement::ExpressionStatement(_, expression) = stmt {
             if let Expression::PrefixExpression(_, operator, right) = expression {
-                assert_eq!(operator, test_operator);
-                check_integer_literal(*right, test_int_value);
+                assert_eq!(operator, expected_operator);
+                check_integer_literal(*right, expected_int_value);
             } else {
                 panic!("Expression not PrefixExpression. Got={:?}", expression);
             }
         } else {
             panic!("Statement not ExpressionStatement. Got={:?}", stmt);
         }
+    }
+}
+
+#[test]
+fn test_parsing_infix_expressions() {
+    let test_cases = vec![
+        ("5 + 5;", 5, "+", 5),
+        ("5 - 5;", 5, "-", 5),
+        ("5 * 5;", 5, "*", 5),
+        ("5 / 5;", 5, "/", 5),
+        ("5 > 5;", 5, ">", 5),
+        ("5 < 5;", 5, "<", 5),
+        ("5 == 5;", 5, "==", 5),
+        ("5 != 5;", 5, "!=", 5),
+    ];
+
+    for test_case in test_cases {
+        let test_code = test_case.0;
+        let expected_left_value = test_case.1;
+        let expected_operator = test_case.2;
+        let expected_right_value = test_case.3;
+
+        let program = parse_program(test_code);
+        assert_eq!(program.statements.len(), 1);
+        let stmt = program.statements[0].clone();
+        if let Statement::ExpressionStatement(_, expression) = stmt {
+            if let Expression::InfixExpression(_, left, operator, right) = expression {
+                check_integer_literal(*left, expected_left_value);
+                assert_eq!(operator, expected_operator);
+                check_integer_literal(*right, expected_right_value);
+            } else {
+                panic!("Expression not InfixExpression. Got={:?}", expression);
+            }
+        } else {
+            panic!("Statement not ExpressionStatement. Got={:?}", stmt);
+        }
+    }
+}
+
+#[test]
+fn test_operator_precedence_parsing() {
+    let test_cases = vec![
+        ("-a * b;", "((-a) * b)"),
+        ("!-a", "(!(-a))"),
+        ("a + b + c", "((a + b) + c)"),
+        ("a + b - c", "((a + b) - c)"),
+        ("a * b * c", "((a * b) * c)"),
+        ("a * b / c", "((a * b) / c)"),
+        ("a + b * c + d / e - f", "(((a + (b * c)) + (d / e)) - f)"),
+        ("3 + 4; -5 * 5", "(3 + 4)((-5) * 5)"),
+        ("5 > 4 == 3 < 4", "((5 > 4) == (3 < 4))"),
+        ("5 < 4 != 3 > 4", "((5 < 4) != (3 > 4))"),
+        ("3 + 4 * 5 == 3 * 1 + 4 * 5", "((3 + (4 * 5)) == ((3 * 1) + (4 * 5)))"),
+    ];
+
+    for test_case in test_cases {
+        let test_input = test_case.0;
+        let expected = test_case.1;
+
+        let program = parse_program(test_input);
+        assert_eq!(program.to_string(), expected);
     }
 }
 

@@ -1,7 +1,9 @@
 use crate::ast;
 use crate::ast::{Expression, Program};
 use crate::lexer::Lexer;
-use crate::token::TokenType::{Bang, Ident, Int, Minus, SemiColon};
+use crate::token::TokenType::{
+    Asterisk, Bang, Eq, GreaterThan, Ident, Int, LessThan, Minus, NotEq, Plus, SemiColon, Slash,
+};
 use crate::token::{Token, TokenType};
 use ast::Statement;
 use std::collections::HashMap;
@@ -11,6 +13,7 @@ type PrefixParseFn = fn(&mut Parser) -> Result<Expression, ParseError>;
 type InfixParseFn = fn(&mut Parser, Expression) -> Result<Expression, ParseError>;
 
 #[repr(u8)]
+#[derive(Debug, Clone)]
 enum Precedence {
     Lowest = 0,
     Equals = 1,      // ==
@@ -28,6 +31,7 @@ pub struct Parser {
     errors: Vec<ParseError>,
     prefix_parse_fns: HashMap<TokenType, PrefixParseFn>,
     infix_parse_fns: HashMap<TokenType, InfixParseFn>,
+    precedences: HashMap<TokenType, Precedence>,
 }
 
 impl Parser {
@@ -39,6 +43,16 @@ impl Parser {
             errors: Vec::new(),
             prefix_parse_fns: HashMap::new(),
             infix_parse_fns: HashMap::new(),
+            precedences: HashMap::from([
+                (TokenType::Eq, Precedence::Equals),
+                (TokenType::NotEq, Precedence::Equals),
+                (TokenType::LessThan, Precedence::LessGreater),
+                (TokenType::GreaterThan, Precedence::LessGreater),
+                (TokenType::Plus, Precedence::Sum),
+                (TokenType::Minus, Precedence::Sum),
+                (TokenType::Slash, Precedence::Product),
+                (TokenType::Asterisk, Precedence::Product),
+            ]),
         };
 
         // Register parsing functions
@@ -46,6 +60,15 @@ impl Parser {
         p.register_prefix(Int, Parser::parse_integer_literal);
         p.register_prefix(Bang, Parser::parse_prefix_expression);
         p.register_prefix(Minus, Parser::parse_prefix_expression);
+
+        p.register_infix(Plus, Parser::parse_infix_expression);
+        p.register_infix(Minus, Parser::parse_infix_expression);
+        p.register_infix(Slash, Parser::parse_infix_expression);
+        p.register_infix(Asterisk, Parser::parse_infix_expression);
+        p.register_infix(Eq, Parser::parse_infix_expression);
+        p.register_infix(NotEq, Parser::parse_infix_expression);
+        p.register_infix(LessThan, Parser::parse_infix_expression);
+        p.register_infix(GreaterThan, Parser::parse_infix_expression);
 
         // Populate cur_token and peek_token
         p.next_token();
@@ -118,15 +141,31 @@ impl Parser {
     }
 
     fn parse_expression(&mut self, precedence: Precedence) -> Result<Expression, ParseError> {
-        let prefix = self.prefix_parse_fns.get(&self.cur_token.token_type);
-        if prefix.is_some() {
-            prefix.unwrap()(self)
-        } else {
-            Err(format!(
+        let prefix_fn = self.prefix_parse_fns.get(&self.cur_token.token_type);
+        if prefix_fn.is_none() {
+            return Err(format!(
                 "no prefix parse function for {} found",
                 self.cur_token.token_type
-            ))
+            ));
         }
+
+        let mut left_exp = prefix_fn.unwrap()(self);
+
+        while !self.peek_token_is(&SemiColon)
+            && (precedence.clone() as u8) < (self.peek_precedence() as u8)
+        {
+            let infix_fn = self.infix_parse_fns.get(&self.peek_token.token_type);
+            if infix_fn.is_none() {
+                return left_exp;
+            }
+
+            let infix_fn_unwrapped = infix_fn.unwrap().clone();
+
+            self.next_token();
+            left_exp = infix_fn_unwrapped(self, left_exp?);
+        }
+
+        left_exp
     }
 
     fn parse_prefix_expression(&mut self) -> Result<Expression, ParseError> {
@@ -135,6 +174,19 @@ impl Parser {
         let right = self.parse_expression(Precedence::Prefix)?;
         Ok(Expression::PrefixExpression(
             token.clone(),
+            token.literal,
+            Box::new(right),
+        ))
+    }
+
+    fn parse_infix_expression(&mut self, left: Expression) -> Result<Expression, ParseError> {
+        let token = self.cur_token.clone();
+        let precedence = self.cur_precedence();
+        self.next_token();
+        let right = self.parse_expression(precedence)?;
+        Ok(Expression::InfixExpression(
+            token.clone(),
+            Box::new(left),
             token.literal,
             Box::new(right),
         ))
@@ -201,6 +253,20 @@ impl Parser {
         } else {
             self.add_peak_error(token_type);
             false
+        }
+    }
+
+    fn cur_precedence(&mut self) -> Precedence {
+        match self.precedences.get(&self.cur_token.token_type) {
+            Some(p) => p.clone(),
+            None => Precedence::Lowest,
+        }
+    }
+
+    fn peek_precedence(&mut self) -> Precedence {
+        match self.precedences.get(&self.peek_token.token_type) {
+            Some(p) => p.clone(),
+            None => Precedence::Lowest,
         }
     }
 }
