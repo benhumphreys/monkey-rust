@@ -15,7 +15,7 @@ fn test_let_statements() {
     let program = parse_program(code);
 
     for i in 1..expected_identifiers.len() {
-        verify_let_statement(&program.statements[i], expected_identifiers[i].to_string())
+        assert_let_statement(&program.statements[i], expected_identifiers[i])
     }
 }
 
@@ -41,18 +41,10 @@ fn test_return_statements() {
 #[test]
 fn test_identifier_expression() {
     let code = "foobar;";
-    let program = parse_program(code);
-
-    assert_eq!(program.statements.len(), 1);
-
-    let stmt = program.statements[0].clone();
+    let stmt = parse_single_expression_program(code);
+    
     if let Statement::ExpressionStatement(_, expression) = stmt {
-        if let Expression::Identifier(token, value) = expression {
-            assert_eq!(token.literal, "foobar");
-            assert_eq!(value, "foobar");
-        } else {
-            panic!("Expression not Identifier. Got={:?}", expression);
-        }
+        assert_identifier(&expression, "foobar");
     } else {
         panic!("Statement not ExpressionStatement. Got={:?}", stmt);
     }
@@ -61,18 +53,10 @@ fn test_identifier_expression() {
 #[test]
 fn test_integer_literal_expression() {
     let code = "5;";
-    let program = parse_program(code);
-
-    assert_eq!(program.statements.len(), 1);
-
-    let stmt = program.statements[0].clone();
+    let stmt = parse_single_expression_program(code);
+    
     if let Statement::ExpressionStatement(_, expression) = stmt {
-        if let Expression::IntegerLiteral(token, value) = expression {
-            assert_eq!(token.literal, "5");
-            assert_eq!(value, 5);
-        } else {
-            panic!("Expression not IntegerLiteral. Got={:?}", expression);
-        }
+        assert_integer_literal(&expression, 5);
     } else {
         panic!("Statement not ExpressionStatement. Got={:?}", stmt);
     }
@@ -87,13 +71,11 @@ fn test_parsing_prefix_expressions() {
         let expected_operator = test_case.1;
         let expected_int_value = test_case.2;
 
-        let program = parse_program(test_code);
-        assert_eq!(program.statements.len(), 1);
-        let stmt = program.statements[0].clone();
+        let stmt = parse_single_expression_program(test_code);
         if let Statement::ExpressionStatement(_, expression) = stmt {
             if let Expression::PrefixExpression(_, operator, right) = expression {
                 assert_eq!(operator, expected_operator);
-                check_integer_literal(*right, expected_int_value);
+                assert_literal_expression(&right, &Value::Integer(expected_int_value));
             } else {
                 panic!("Expression not PrefixExpression. Got={:?}", expression);
             }
@@ -118,21 +100,16 @@ fn test_parsing_infix_expressions() {
 
     for test_case in test_cases {
         let test_code = test_case.0;
-        let expected_left_value = test_case.1;
+        let expected_left_value = Value::Integer(test_case.1);
         let expected_operator = test_case.2;
-        let expected_right_value = test_case.3;
+        let expected_right_value = Value::Integer(test_case.3);
 
-        let program = parse_program(test_code);
-        assert_eq!(program.statements.len(), 1);
-        let stmt = program.statements[0].clone();
+        let stmt = parse_single_expression_program(test_code);
         if let Statement::ExpressionStatement(_, expression) = stmt {
-            if let Expression::InfixExpression(_, left, operator, right) = expression {
-                check_integer_literal(*left, expected_left_value);
-                assert_eq!(operator, expected_operator);
-                check_integer_literal(*right, expected_right_value);
-            } else {
-                panic!("Expression not InfixExpression. Got={:?}", expression);
-            }
+            assert_infix_expression(&expression,
+            expected_left_value,
+            expected_operator,
+            expected_right_value);
         } else {
             panic!("Statement not ExpressionStatement. Got={:?}", stmt);
         }
@@ -152,7 +129,10 @@ fn test_operator_precedence_parsing() {
         ("3 + 4; -5 * 5", "(3 + 4)((-5) * 5)"),
         ("5 > 4 == 3 < 4", "((5 > 4) == (3 < 4))"),
         ("5 < 4 != 3 > 4", "((5 < 4) != (3 > 4))"),
-        ("3 + 4 * 5 == 3 * 1 + 4 * 5", "((3 + (4 * 5)) == ((3 * 1) + (4 * 5)))"),
+        (
+            "3 + 4 * 5 == 3 * 1 + 4 * 5",
+            "((3 + (4 * 5)) == ((3 * 1) + (4 * 5)))",
+        ),
     ];
 
     for test_case in test_cases {
@@ -164,12 +144,56 @@ fn test_operator_precedence_parsing() {
     }
 }
 
-fn check_integer_literal(exp: ast::Expression, expected_value: i64) {
+fn assert_infix_expression(
+    exp: &ast::Expression,
+    expected_left: Value,
+    expected_operator: &str,
+    expected_right: Value,
+) {
+    if let Expression::InfixExpression(_token, actual_left, actual_op, actual_right) = exp {
+        assert_literal_expression(&actual_left, &expected_left);
+        assert_eq!(actual_op, expected_operator);
+        assert_literal_expression(&actual_right, &expected_right);
+    }
+}
+
+fn assert_integer_literal(exp: &ast::Expression, expected_value: i64) {
     if let Expression::IntegerLiteral(token, value) = exp {
-        assert_eq!(value, expected_value);
+        assert_eq!(*value, expected_value);
         assert_eq!(token.literal, expected_value.to_string())
     } else {
         panic!("Expression not IntegerLiteral. Got={:?}", exp);
+    }
+}
+
+fn assert_let_statement(stmt: &Statement, expected: &str) {
+    if let Statement::LetStatement(_token, identifier, _expression) = stmt {
+        assert_eq!(stmt.token_literal(), "let");
+        assert_eq!(identifier.value, expected);
+    } else {
+        panic!("Statement not LetStatement. Got={:?}", stmt)
+    }
+}
+
+fn assert_identifier(exp: &ast::Expression, expected: &str) {
+    if let Expression::Identifier(token, value) = exp {
+        assert_eq!(value, expected);
+        assert_eq!(token.literal, expected)
+    } else {
+        panic!("Expression not Identifier. Got={:?}", exp);
+    }
+}
+
+#[derive(Debug)]
+enum Value {
+    Integer(i64),
+    String(String),
+}
+
+fn assert_literal_expression(expression: &Expression, expected: &Value) {
+    match expected {
+        Value::Integer(val) => assert_integer_literal(expression, *val),
+        Value::String(val) => assert_identifier(expression, val),
     }
 }
 
@@ -194,11 +218,8 @@ fn parse_program(code: &str) -> Program {
     program
 }
 
-fn verify_let_statement(actual: &Statement, name: String) {
-    if let Statement::LetStatement(_token, identifier, _expression) = actual {
-        assert_eq!(actual.token_literal(), "let");
-        assert_eq!(identifier.value, name);
-    } else {
-        panic!("Statement not LetStatement. Got={:?}", actual)
-    }
+fn parse_single_expression_program(code: &str) -> Statement {
+    let program = parse_program(code);
+    assert_eq!(program.statements.len(), 1);
+    program.statements[0].clone()
 }

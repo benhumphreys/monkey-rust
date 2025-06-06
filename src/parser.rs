@@ -44,14 +44,14 @@ impl Parser {
             prefix_parse_fns: HashMap::new(),
             infix_parse_fns: HashMap::new(),
             precedences: HashMap::from([
-                (TokenType::Eq, Precedence::Equals),
-                (TokenType::NotEq, Precedence::Equals),
-                (TokenType::LessThan, Precedence::LessGreater),
-                (TokenType::GreaterThan, Precedence::LessGreater),
-                (TokenType::Plus, Precedence::Sum),
-                (TokenType::Minus, Precedence::Sum),
-                (TokenType::Slash, Precedence::Product),
-                (TokenType::Asterisk, Precedence::Product),
+                (Eq, Precedence::Equals),
+                (NotEq, Precedence::Equals),
+                (LessThan, Precedence::LessGreater),
+                (GreaterThan, Precedence::LessGreater),
+                (Plus, Precedence::Sum),
+                (Minus, Precedence::Sum),
+                (Slash, Precedence::Product),
+                (Asterisk, Precedence::Product),
             ]),
         };
 
