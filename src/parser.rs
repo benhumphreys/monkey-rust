@@ -1,10 +1,11 @@
 use crate::ast;
 use crate::ast::{Expression, Program};
 use crate::lexer::Lexer;
-use crate::token::TokenType::{Asterisk, Bang, Eq, False, GreaterThan, Ident, Int, LessThan, Minus, NotEq, Plus, SemiColon, Slash, True};
+use crate::token::TokenType::{Asterisk, Bang, Eq, False, GreaterThan, Ident, Int, LeftParen, LessThan, Minus, NotEq, Plus, RightParen, SemiColon, Slash, True};
 use crate::token::{Token, TokenType};
 use ast::Statement;
 use std::collections::HashMap;
+use crate::parser::Precedence::Lowest;
 
 type ParseError = String;
 type PrefixParseFn = fn(&mut Parser) -> Result<Expression, ParseError>;
@@ -60,6 +61,7 @@ impl Parser {
         p.register_prefix(Minus, Parser::parse_prefix_expression);
         p.register_prefix(True, Parser::parse_boolean_expression);
         p.register_prefix(False, Parser::parse_boolean_expression);
+        p.register_prefix(LeftParen, Parser::parse_grouped_expression);
 
         p.register_infix(Plus, Parser::parse_infix_expression);
         p.register_infix(Minus, Parser::parse_infix_expression);
@@ -240,6 +242,17 @@ impl Parser {
     
     fn parse_boolean_expression(&mut self) -> Result<Expression, ParseError> {
         Ok(Expression::Boolean(self.cur_token.clone(), self.cur_token_is(&True)))
+    }
+    
+    fn parse_grouped_expression(&mut self) -> Result<Expression, ParseError> {
+        self.next_token();
+        
+        let expression = self.parse_expression(Lowest);
+        
+        if !self.expect_peek(&RightParen) {
+            return Err(ParseError::from("Expected right paren"));
+        }
+        expression
     }
 
     fn cur_token_is(&self, token_type: &TokenType) -> bool {
