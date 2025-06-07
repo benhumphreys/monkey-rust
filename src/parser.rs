@@ -1,9 +1,7 @@
 use crate::ast;
 use crate::ast::{Expression, Program};
 use crate::lexer::Lexer;
-use crate::token::TokenType::{
-    Asterisk, Bang, Eq, GreaterThan, Ident, Int, LessThan, Minus, NotEq, Plus, SemiColon, Slash,
-};
+use crate::token::TokenType::{Asterisk, Bang, Eq, False, GreaterThan, Ident, Int, LessThan, Minus, NotEq, Plus, SemiColon, Slash, True};
 use crate::token::{Token, TokenType};
 use ast::Statement;
 use std::collections::HashMap;
@@ -60,6 +58,8 @@ impl Parser {
         p.register_prefix(Int, Parser::parse_integer_literal);
         p.register_prefix(Bang, Parser::parse_prefix_expression);
         p.register_prefix(Minus, Parser::parse_prefix_expression);
+        p.register_prefix(True, Parser::parse_boolean_expression);
+        p.register_prefix(False, Parser::parse_boolean_expression);
 
         p.register_infix(Plus, Parser::parse_infix_expression);
         p.register_infix(Minus, Parser::parse_infix_expression);
@@ -236,6 +236,10 @@ impl Parser {
         }
 
         Ok(Statement::ReturnStatement(token, Expression::Nil))
+    }
+    
+    fn parse_boolean_expression(&mut self) -> Result<Expression, ParseError> {
+        Ok(Expression::Boolean(self.cur_token.clone(), self.cur_token_is(&True)))
     }
 
     fn cur_token_is(&self, token_type: &TokenType) -> bool {

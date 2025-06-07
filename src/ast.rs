@@ -9,14 +9,22 @@ pub trait Node {
 pub enum Expression {
     Identifier(Token, String),
     IntegerLiteral(Token, i64),
+    Boolean(Token, bool),
     PrefixExpression(Token, String, Box<Expression>),
     InfixExpression(Token, Box<Expression>, String, Box<Expression>),
-    Nil, // TODO: Work out how to deal with this. It has been simply translated from the Go example
+    Nil, // TODO: Remove once let and return expressions are handled
 }
 
 impl Node for Expression {
     fn token_literal(&self) -> String {
-        String::new()
+        match self {
+            Expression::Identifier(token, _) => { token.literal.clone() }
+            Expression::IntegerLiteral(token, _) => { token.literal.clone() }
+            Expression::Boolean(token, _) => {token.literal.clone() }
+            Expression::PrefixExpression(token, _, _) => { token.literal.clone() }
+            Expression::InfixExpression(token, _, _, _) => { token.literal.clone() }
+            Expression::Nil => { "Nil".to_string() }
+        }
     }
 }
 
@@ -25,6 +33,7 @@ impl Display for Expression {
         match self {
             Expression::Identifier(_, value) => write!(f, "{}", value),
             Expression::IntegerLiteral(_, value) => write!(f, "{}", value),
+            Expression::Boolean(_, value) => write!(f, "{}", value),
             Expression::PrefixExpression(_, operator, right) => {
                 write!(f, "({}{})", operator, right.to_string())
             }
@@ -54,6 +63,12 @@ impl Node for Identifier {
     }
 }
 
+#[derive(Debug, Clone)]
+pub struct IntegerLiteral {
+    pub token: Token,
+    pub value: i64,
+}
+
 impl Node for IntegerLiteral {
     fn token_literal(&self) -> String {
         self.token.literal.clone()
@@ -61,9 +76,19 @@ impl Node for IntegerLiteral {
 }
 
 #[derive(Debug, Clone)]
-pub struct IntegerLiteral {
-    pub token: Token,
-    pub value: i64,
+pub struct Boolean {
+    token: Token,
+    value: bool
+}
+
+impl Display for Boolean {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.value)
+    }
+}
+
+impl Node for Boolean {
+    fn token_literal(&self) -> String { self.token.literal.clone() }
 }
 
 #[derive(Debug, Clone)]
@@ -182,14 +207,12 @@ impl Program {
         }
     }
 
-    /*
     pub fn token_literal(&self) -> String {
         match self.statements.is_empty() {
             true => { String::new() },
             false => { self.statements[0].token_literal().clone() }
         }
     }
-    */
 }
 
 impl Display for Program {

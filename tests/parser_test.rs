@@ -41,46 +41,39 @@ fn test_return_statements() {
 #[test]
 fn test_identifier_expression() {
     let code = "foobar;";
-    let stmt = parse_single_expression_program(code);
+    let expression = parse_single_expression_program(code);
     
-    if let Statement::ExpressionStatement(_, expression) = stmt {
-        assert_identifier(&expression, "foobar");
-    } else {
-        panic!("Statement not ExpressionStatement. Got={:?}", stmt);
-    }
+    assert_identifier(&expression, "foobar");
 }
 
 #[test]
 fn test_integer_literal_expression() {
     let code = "5;";
-    let stmt = parse_single_expression_program(code);
+    let expression = parse_single_expression_program(code);
     
-    if let Statement::ExpressionStatement(_, expression) = stmt {
-        assert_integer_literal(&expression, 5);
-    } else {
-        panic!("Statement not ExpressionStatement. Got={:?}", stmt);
-    }
+    assert_integer_literal(&expression, 5);
 }
 
 #[test]
 fn test_parsing_prefix_expressions() {
-    let test_cases = vec![("!5", "!", 5), ("-15", "-", 15)];
+    let test_cases = vec![
+            ("!5", "!", Value::Integer(5)),
+            ("-15", "-", Value::Integer(15)),
+            ("!true", "!", Value::Boolean(true)),
+            ("!false", "!", Value::Boolean(false))
+    ];
 
     for test_case in test_cases {
         let test_code = test_case.0;
         let expected_operator = test_case.1;
-        let expected_int_value = test_case.2;
+        let expected_value = test_case.2;
 
-        let stmt = parse_single_expression_program(test_code);
-        if let Statement::ExpressionStatement(_, expression) = stmt {
-            if let Expression::PrefixExpression(_, operator, right) = expression {
-                assert_eq!(operator, expected_operator);
-                assert_literal_expression(&right, &Value::Integer(expected_int_value));
-            } else {
-                panic!("Expression not PrefixExpression. Got={:?}", expression);
-            }
+        let expression = parse_single_expression_program(test_code);
+        if let Expression::PrefixExpression(_, operator, right) = expression {
+            assert_eq!(operator, expected_operator);
+            assert_literal_expression(&right, &expected_value);
         } else {
-            panic!("Statement not ExpressionStatement. Got={:?}", stmt);
+            panic!("Expression not PrefixExpression. Got={:?}", expression);
         }
     }
 }
@@ -88,31 +81,30 @@ fn test_parsing_prefix_expressions() {
 #[test]
 fn test_parsing_infix_expressions() {
     let test_cases = vec![
-        ("5 + 5;", 5, "+", 5),
-        ("5 - 5;", 5, "-", 5),
-        ("5 * 5;", 5, "*", 5),
-        ("5 / 5;", 5, "/", 5),
-        ("5 > 5;", 5, ">", 5),
-        ("5 < 5;", 5, "<", 5),
-        ("5 == 5;", 5, "==", 5),
-        ("5 != 5;", 5, "!=", 5),
+        ("5 + 5;", Value::Integer(5), "+", Value::Integer(5)),
+        ("5 - 5;", Value::Integer(5), "-", Value::Integer(5)),
+        ("5 * 5;", Value::Integer(5), "*", Value::Integer(5)),
+        ("5 / 5;", Value::Integer(5), "/", Value::Integer(5)),
+        ("5 > 5;", Value::Integer(5), ">", Value::Integer(5)),
+        ("5 < 5;", Value::Integer(5), "<", Value::Integer(5)),
+        ("5 == 5;", Value::Integer(5), "==", Value::Integer(5)),
+        ("5 != 5;", Value::Integer(5), "!=", Value::Integer(5)),
+        ("true == true", Value::Boolean(true), "==", Value::Boolean(true)),
+        ("true != false", Value::Boolean(true), "!=", Value::Boolean(false)),
+        ("false == false", Value::Boolean(false), "==", Value::Boolean(false)),
     ];
 
     for test_case in test_cases {
         let test_code = test_case.0;
-        let expected_left_value = Value::Integer(test_case.1);
+        let expected_left_value = test_case.1;
         let expected_operator = test_case.2;
-        let expected_right_value = Value::Integer(test_case.3);
+        let expected_right_value = test_case.3;
 
-        let stmt = parse_single_expression_program(test_code);
-        if let Statement::ExpressionStatement(_, expression) = stmt {
-            assert_infix_expression(&expression,
-            expected_left_value,
-            expected_operator,
-            expected_right_value);
-        } else {
-            panic!("Statement not ExpressionStatement. Got={:?}", stmt);
-        }
+        let expression = parse_single_expression_program(test_code);
+        assert_infix_expression(&expression,
+        expected_left_value,
+        expected_operator,
+        expected_right_value);
     }
 }
 
@@ -133,6 +125,10 @@ fn test_operator_precedence_parsing() {
             "3 + 4 * 5 == 3 * 1 + 4 * 5",
             "((3 + (4 * 5)) == ((3 * 1) + (4 * 5)))",
         ),
+        ("true", "true"),
+        ("false", "false"),
+        ("3 > 5 == false", "((3 > 5) == false)"),
+        ("3 < 5 == true", "((3 < 5) == true)")
     ];
 
     for test_case in test_cases {
@@ -141,6 +137,19 @@ fn test_operator_precedence_parsing() {
 
         let program = parse_program(test_input);
         assert_eq!(program.to_string(), expected);
+    }
+}
+
+#[test]
+fn test_boolean_expression() {
+    let test_cases = vec![("true;", true), ("false;", false)];
+
+    for test_case in test_cases {
+        let test_code = test_case.0;
+        let expected_value = test_case.1;
+
+        let expression = parse_single_expression_program(test_code);
+        assert_boolean_literal(&expression, expected_value);
     }
 }
 
@@ -166,6 +175,15 @@ fn assert_integer_literal(exp: &ast::Expression, expected_value: i64) {
     }
 }
 
+fn assert_boolean_literal(exp: &ast::Expression, expected_value: bool) {
+    if let Expression::Boolean(token, value) = exp {
+        assert_eq!(*value, expected_value);
+        assert_eq!(token.literal, expected_value.to_string())
+    } else {
+        panic!("Expression not Boolean. Got={:?}", exp);
+    }
+}
+
 fn assert_let_statement(stmt: &Statement, expected: &str) {
     if let Statement::LetStatement(_token, identifier, _expression) = stmt {
         assert_eq!(stmt.token_literal(), "let");
@@ -187,12 +205,14 @@ fn assert_identifier(exp: &ast::Expression, expected: &str) {
 #[derive(Debug)]
 enum Value {
     Integer(i64),
+    Boolean(bool),
     String(String),
 }
 
 fn assert_literal_expression(expression: &Expression, expected: &Value) {
     match expected {
         Value::Integer(val) => assert_integer_literal(expression, *val),
+        Value::Boolean(val) => assert_boolean_literal(expression, *val),
         Value::String(val) => assert_identifier(expression, val),
     }
 }
@@ -218,8 +238,13 @@ fn parse_program(code: &str) -> Program {
     program
 }
 
-fn parse_single_expression_program(code: &str) -> Statement {
+fn parse_single_expression_program(code: &str) -> Expression {
     let program = parse_program(code);
     assert_eq!(program.statements.len(), 1);
-    program.statements[0].clone()
+    let stmt = program.statements[0].clone();
+    if let Statement::ExpressionStatement(_, expression) = stmt {
+        return expression;
+    } else {
+        panic!("Statement not ExpressionStatement. Got={:?}", stmt);
+    }
 }
