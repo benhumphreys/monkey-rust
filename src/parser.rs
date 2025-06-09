@@ -1,7 +1,7 @@
 use crate::ast;
-use crate::ast::{Expression, Program};
+use crate::ast::{BlockStatement, Expression, Program};
 use crate::lexer::Lexer;
-use crate::token::TokenType::{Asterisk, Bang, Eq, False, GreaterThan, Ident, Int, LeftParen, LessThan, Minus, NotEq, Plus, RightParen, SemiColon, Slash, True};
+use crate::token::TokenType::*;
 use crate::token::{Token, TokenType};
 use ast::Statement;
 use std::collections::HashMap;
@@ -62,6 +62,7 @@ impl Parser {
         p.register_prefix(True, Parser::parse_boolean_expression);
         p.register_prefix(False, Parser::parse_boolean_expression);
         p.register_prefix(LeftParen, Parser::parse_grouped_expression);
+        p.register_prefix(If, Parser::parse_if_expression);
 
         p.register_infix(Plus, Parser::parse_infix_expression);
         p.register_infix(Minus, Parser::parse_infix_expression);
@@ -253,6 +254,60 @@ impl Parser {
             return Err(ParseError::from("Expected right paren"));
         }
         expression
+    }
+    
+    fn parse_if_expression(&mut self) -> Result<Expression, ParseError> {
+        let token = self.cur_token.clone();
+        
+        if !self.expect_peek(&LeftParen) {
+            //return Err(ParseError::from("Expected left paren"));
+            return Ok(Expression::Nil)
+        }
+        
+        self.next_token();
+        let condition = self.parse_expression(Lowest)?;
+        
+        if !self.expect_peek(&RightParen) {
+            //return Err(ParseError::from("Expected right paren"));
+            return Ok(Expression::Nil)
+        }
+        
+        if !self.expect_peek(&LeftBrace) {
+            //return Err(ParseError::from("Expected left brace"));
+            return Ok(Expression::Nil)
+        }
+        
+        let consequence = self.parse_block_statement()?;
+       
+        let mut alternative: Option<BlockStatement> = None;
+        if self.peek_token_is(&Else) {
+            self.next_token();
+            
+            if !self.expect_peek(&LeftBrace) {
+                //return Err(ParseError::from("Expected left brace"));
+                return Ok(Expression::Nil)
+            }
+            alternative = Some(self.parse_block_statement()?);
+        }
+        
+        Ok(Expression::IfExpression(token, Box::new(condition), consequence, alternative))
+    }
+    
+    fn parse_block_statement(&mut self) -> Result<BlockStatement, ParseError> {
+        let token = self.cur_token.clone();
+        let mut statements = Vec::new();
+        
+        self.next_token();
+       
+        while !self.cur_token_is(&RightBrace) && !self.cur_token_is(&EOF) {
+            let stmt = self.parse_statement();
+            if stmt.is_ok() {
+                statements.push(stmt?)
+            }
+            self.next_token()
+        }
+        
+        Ok(BlockStatement::new(token, statements))
     }
 
     fn cur_token_is(&self, token_type: &TokenType) -> bool {

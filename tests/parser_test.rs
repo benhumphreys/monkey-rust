@@ -1,7 +1,9 @@
 #![allow(dead_code)]
 
+use std::ops::Deref;
 use monkey::ast;
 use monkey::ast::{Expression, Node, Program, Statement};
+use monkey::ast::Statement::ExpressionStatement;
 use monkey::lexer::Lexer;
 use monkey::parser::Parser;
 
@@ -156,6 +158,68 @@ fn test_boolean_expression() {
 
         let expression = parse_single_expression_program(test_code);
         assert_boolean_literal(&expression, expected_value);
+    }
+}
+
+#[test]
+fn test_if_expression() {
+    let input = "if (x < y) { x }";
+    let expression = parse_single_expression_program(input);
+
+    if let Expression::IfExpression(_, condition, consequence, alternative) = expression {
+        // Verify condition
+        assert_infix_expression(condition.deref(), Value::String("x".to_string()), "<", Value::String("y".to_string()));
+       
+        // Verify consequence
+        assert_eq!(consequence.statements.len(), 1);
+        let consequence_stmt = &consequence.statements[0];
+        if let ExpressionStatement(_, consequence_expr) = consequence_stmt {
+            assert_identifier(&consequence_expr, "x");
+        } else {
+            panic!("Expression not IfExpression. Got={:?}", consequence_stmt);
+        }
+        
+        // Verify alternative is not present
+        if alternative.is_some() {
+            panic!("Alternative not empty. Got={:?}", alternative.unwrap())
+        }
+    } else {
+        panic!("Expression not IfExpression. Got={:?}", expression);
+    }
+}
+
+#[test]
+fn test_if_else_expression() {
+    let input = "if (x < y) { x } else { y }";
+    let expression = parse_single_expression_program(input);
+
+    if let Expression::IfExpression(_, condition, consequence, maybe_alternative) = expression {
+        // Verify condition
+        assert_infix_expression(condition.deref(),
+                                Value::String("x".to_string()),
+                                "<",
+                                Value::String("y".to_string()));
+
+        // Verify consequence
+        assert_eq!(consequence.statements.len(), 1);
+        let consequence_stmt = &consequence.statements[0];
+        if let ExpressionStatement(_, consequence_expr) = consequence_stmt {
+            assert_identifier(&consequence_expr, "x");
+        } else {
+            panic!("Expression not ExpressionStatement. Got={:?}", consequence_stmt);
+        }
+
+        // Verify alternative
+        let alternative = maybe_alternative.expect("Alternative is empty");
+        assert_eq!(alternative.statements.len(), 1);
+        let alternative_stmt = &alternative.statements[0];
+        if let ExpressionStatement(_, alternative_expr) = alternative_stmt {
+            assert_identifier(&alternative_expr, "y");
+        } else {
+            panic!("Expression not ExpressionStatement. Got={:?}", alternative_stmt);
+        }
+    } else {
+        panic!("Expression not IfExpression. Got={:?}", expression);
     }
 }
 

@@ -12,7 +12,8 @@ pub enum Expression {
     Boolean(Token, bool),
     PrefixExpression(Token, String, Box<Expression>),
     InfixExpression(Token, Box<Expression>, String, Box<Expression>),
-    Nil, // TODO: Remove once let and return expressions are handled
+    IfExpression(Token, Box<Expression>, BlockStatement, Option<BlockStatement>),
+    Nil, // TODO: Work out if this can be replaced with error handling
 }
 
 impl Node for Expression {
@@ -23,6 +24,7 @@ impl Node for Expression {
             Expression::Boolean(token, _) => {token.literal.clone() }
             Expression::PrefixExpression(token, _, _) => { token.literal.clone() }
             Expression::InfixExpression(token, _, _, _) => { token.literal.clone() }
+            Expression::IfExpression(token, _, _, _) => { token.literal.clone() }
             Expression::Nil => { "Nil".to_string() }
         }
     }
@@ -38,8 +40,15 @@ impl Display for Expression {
                 write!(f, "({}{})", operator, right.to_string())
             }
             Expression::InfixExpression(_, left, operator, right) => {
-                write!(f, "({} {} {})", left, operator, right)
-            }
+                write!(f, "({} {} {})", left.to_string(), operator, right.to_string())
+            },
+            Expression::IfExpression(_, condition, consequence, alternative) => {
+                write!(f, "if{} {}", condition, consequence)?;
+                if let Some(alt) = alternative {
+                    write!(f, "else {}", alt)?;
+                }
+                Ok(())
+            },
             Expression::Nil => write!(f, "Nil"),
         }
     }
@@ -172,6 +181,7 @@ pub enum Statement {
     LetStatement(Token, Identifier, Expression),
     ReturnStatement(Token, Expression),
     ExpressionStatement(Token, Expression),
+    BlockStatement(Token, Vec<Statement>)
 }
 
 impl Display for Statement {
@@ -180,6 +190,15 @@ impl Display for Statement {
             Statement::LetStatement(_, id, expr) => write!(f, "let {} = {};", id, expr),
             Statement::ReturnStatement(_, expr) => write!(f, "return {};", expr),
             Statement::ExpressionStatement(_, expr) => write!(f, "{}", expr),
+            Statement::BlockStatement(_, stmts) => {
+                let formatted_statements = stmts
+                    .iter()
+                    .map(|stmt| stmt.to_string())
+                    .collect::<Vec<String>>()
+                    .join("");
+
+                write!(f, "{}", formatted_statements)
+            }
         }
     }
 }
@@ -191,7 +210,66 @@ impl Node for Statement {
             LetStatement(token, _, _) => token.literal.clone(),
             ReturnStatement(token, _) => token.literal.clone(),
             ExpressionStatement(token, _) => token.literal.clone(),
+            BlockStatement(token, _) => token.literal.clone()
         }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct BlockStatement {
+    pub token: Token,
+    pub statements: Vec<Statement>
+}
+
+impl BlockStatement {
+    pub fn new(token: Token, statements: Vec<Statement>) -> BlockStatement {
+        BlockStatement {
+            token: token,
+            statements: statements
+        }
+    }    
+}
+
+impl Display for BlockStatement {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        let formatted_statements = self
+            .statements
+            .iter()
+            .map(|stmt| stmt.to_string())
+            .collect::<Vec<String>>()
+            .join("");
+
+        write!(f, "{}", formatted_statements)
+    }
+}
+
+impl Node for BlockStatement {
+    fn token_literal(&self) -> String {
+        self.token.literal.clone()
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct IfExpression {
+    pub token: Token,
+    pub condition: Expression,
+    pub consequence: BlockStatement,
+    pub alternative: Option<BlockStatement>,
+}
+
+impl Display for IfExpression {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "if{} {}", self.condition, self.consequence)?;
+        if let Some(alt) = &self.alternative {
+            write!(f, "else {}", alt)?;
+        }
+        Ok(())
+    }
+}
+
+impl Node for IfExpression {
+    fn token_literal(&self) -> String {
+        self.token.literal.clone()
     }
 }
 
