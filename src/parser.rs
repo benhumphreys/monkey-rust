@@ -217,33 +217,33 @@ impl Parser {
             return Err("no identifier in let statement".to_string());
         }
 
-        let name = ast::Identifier {
-            token: self.cur_token.clone(),
-            value: self.cur_token.literal.clone(),
-        };
+        let name = Identifier::new(self.cur_token.clone(),self.cur_token.literal.clone());
 
         if !self.expect_peek(&TokenType::Assign) {
             return Err("no assignment in let statement".to_string());
         }
-
-        // TODO: We're skipping expressions until we encounter a semicolon
-        while !self.cur_token_is(&TokenType::SemiColon) {
+        
+        self.next_token();
+        let expression = self.parse_expression(Lowest)?;
+        
+        if self.peek_token_is(&SemiColon) {
             self.next_token();
         }
 
-        Ok(Statement::LetStatement(token, name, Expression::Nil))
+        Ok(Statement::LetStatement(token, name, expression))
     }
 
     fn parse_return_statement(&mut self) -> Result<Statement, ParseError> {
         let token = self.cur_token.clone();
+        
         self.next_token();
+        let expression = self.parse_expression(Lowest)?;
 
-        // TODO: We're skipping expressions until we encounter a semicolon
         while !self.cur_token_is(&TokenType::SemiColon) {
             self.next_token();
         }
 
-        Ok(Statement::ReturnStatement(token, Expression::Nil))
+        Ok(Statement::ReturnStatement(token, expression))
     }
 
     fn parse_boolean_expression(&mut self) -> Result<Expression, ParseError> {
@@ -366,34 +366,34 @@ impl Parser {
 
         Ok(identifiers)
     }
-    
+
     fn parse_call_expression(&mut self, function: Expression) -> Result<Expression, ParseError> {
         let token = self.cur_token.clone();
         let arguments = self.parse_call_arguments()?;
         Ok(Expression::CallExpression(token, Box::new(function), arguments))
     }
-    
+
     fn parse_call_arguments(&mut self) -> Result<Vec<Expression>, ParseError> {
         let mut args = Vec::new();
-        
+
         if self.peek_token_is(&RightParen) {
             self.next_token();
             return Ok(args);
         }
-        
+
         self.next_token();
         args.push(self.parse_expression(Lowest)?.clone());
-        
+
         while self.peek_token_is(&Comma) {
             self.next_token();
             self.next_token();
             args.push(self.parse_expression(Lowest)?.clone());
         }
-        
+
         if !self.expect_peek(&RightParen) {
             return Err("Failed to parse function arguments".to_string())
         }
-        
+
         Ok(args)
     }
 

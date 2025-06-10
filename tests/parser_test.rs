@@ -9,31 +9,54 @@ use std::ops::Deref;
 
 #[test]
 fn test_let_statements() {
-    let code = "let x = 5;\n\
-            let y = 10;\n\
-            let foobar = 838383;\n";
+    let test_cases = vec![
+        ("let x = 5;", "x", Value::Integer(5)),
+        ("let y = true;", "y", Value::Boolean(true)),
+        ("let foobar = y;", "foobar", Value::String("y".to_string())),
+    ];
 
-    let expected_identifiers = vec!["x", "y", "foobar"];
-    let program = parse_program(code);
+    for test_case in test_cases {
+        let test_input = test_case.0;
+        let expected_identifier = test_case.1;
+        let expected_value = test_case.2;
 
-    for i in 1..expected_identifiers.len() {
-        assert_let_statement(&program.statements[i], expected_identifiers[i])
+        // Verify identifier
+        let stmt = parse_single_statement_program(test_input);
+        assert_let_statement(&stmt, expected_identifier);
+
+        // Verify value/expression
+        if let Statement::LetStatement(_, _, expression) = stmt {
+            assert_literal_expression(&expression, &expected_value)
+        }
     }
 }
 
 #[test]
+fn test_let_statement_with_errors() {
+    let code = "let x 5;";
+    let mut lexer = Lexer::new(String::from(code));
+    let mut parser = Parser::new(&mut lexer);
+    parser.parse_program();
+    assert_eq!(false, parser.errors().is_empty())
+}
+
+#[test]
 fn test_return_statements() {
-    let code = "return 5;\n\
-            return 10;\n\
-            return 993322;\n";
+    let test_cases = vec![
+        ("return 5;", Value::Integer(5)),
+        ("return true;", Value::Boolean(true)),
+        ("return foobar;", Value::String("foobar".to_string())),
+    ];
 
-    let program = parse_program(code);
+    for test_case in test_cases {
+        let test_input = test_case.0;
+        let expected_value = test_case.1;
 
-    assert_eq!(program.statements.len(), 3);
+        let stmt = parse_single_statement_program(test_input);
 
-    for stmt in program.statements {
-        if let Statement::ReturnStatement(token, _) = stmt {
-            assert_eq!(token.literal, "return")
+        if let Statement::ReturnStatement(token, expression) = stmt {
+            assert_eq!(token.literal, "return");
+            assert_literal_expression(&expression, &expected_value);
         } else {
             panic!("Statement not ReturnStatement. Got={:?}", stmt)
         }
@@ -296,11 +319,11 @@ fn test_function_parameter_parsing() {
         ("fn(x) {}", vec!["x"]),
         ("fn(x, y, z) {}", vec!["x", "y", "z"]),
     ];
-    
+
     for test_case in test_cases {
         let test_input = test_case.0;
         let expected_parameters = test_case.1;
-        
+
         let expression = parse_single_expression_program(test_input);
         if let Expression::FunctionLiteral(_, parameters, _) = expression {
             assert_eq!(parameters.len(), expected_parameters.len());
@@ -315,7 +338,7 @@ fn test_function_parameter_parsing() {
 fn test_call_expression_parsing() {
     let input = "add(1, 2 * 3, 4 + 5);";
     let expression = parse_single_expression_program(input);
-    
+
     if let Expression::CallExpression(_, function, arguments) = expression {
         assert_identifier(function.deref(), "add");
         assert_eq!(arguments.len(), 3);
@@ -410,10 +433,14 @@ fn parse_program(code: &str) -> Program {
     program
 }
 
-fn parse_single_expression_program(code: &str) -> Expression {
+fn parse_single_statement_program(code: &str) -> Statement {
     let program = parse_program(code);
     assert_eq!(program.statements.len(), 1);
-    let stmt = program.statements[0].clone();
+    program.statements[0].clone()
+}
+
+fn parse_single_expression_program(code: &str) -> Expression {
+    let stmt = parse_single_statement_program(code);
     if let Statement::ExpressionStatement(_, expression) = stmt {
         return expression;
     } else {
