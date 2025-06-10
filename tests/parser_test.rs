@@ -154,6 +154,9 @@ fn test_operator_precedence_parsing() {
         ("(5 + 5) * 2 * (5 + 5)", "(((5 + 5) * 2) * (5 + 5))"),
         ("-(5 + 5)", "(-(5 + 5))"),
         ("!(true == true)", "(!(true == true))"),
+        ("a + add(b * c) + d", "((a + add((b * c))) + d)"),
+        ("add(a, b, 1, 2 * 3, 4 + 5, add(6, 7 * 8))", "add(a, b, 1, (2 * 3), (4 + 5), add(6, (7 * 8)))"),
+        ("add(a + b + c * d / f + g)", "add((((a + b) + ((c * d) / f)) + g))")
     ];
 
     for test_case in test_cases {
@@ -305,6 +308,20 @@ fn test_function_parameter_parsing() {
                 assert_eq!(parameters[i].value, expected_parameters[i]);
             }
         }
+    }
+}
+
+#[test]
+fn test_call_expression_parsing() {
+    let input = "add(1, 2 * 3, 4 + 5);";
+    let expression = parse_single_expression_program(input);
+    
+    if let Expression::CallExpression(_, function, arguments) = expression {
+        assert_identifier(function.deref(), "add");
+        assert_eq!(arguments.len(), 3);
+        assert_literal_expression(&arguments[0], &Value::Integer(1));
+        assert_infix_expression(&arguments[1], Value::Integer(2), "*", Value::Integer(3));
+        assert_infix_expression(&arguments[2], Value::Integer(4), "+", Value::Integer(5));
     }
 }
 

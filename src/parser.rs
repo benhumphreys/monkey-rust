@@ -53,6 +53,7 @@ impl Parser {
                 (Minus, Precedence::Sum),
                 (Slash, Precedence::Product),
                 (Asterisk, Precedence::Product),
+                (LeftParen, Precedence::Call),
             ]),
         };
 
@@ -75,6 +76,7 @@ impl Parser {
         p.register_infix(NotEq, Parser::parse_infix_expression);
         p.register_infix(LessThan, Parser::parse_infix_expression);
         p.register_infix(GreaterThan, Parser::parse_infix_expression);
+        p.register_infix(LeftParen, Parser::parse_call_expression);
 
         // Populate cur_token and peek_token
         p.next_token();
@@ -363,6 +365,36 @@ impl Parser {
         }
 
         Ok(identifiers)
+    }
+    
+    fn parse_call_expression(&mut self, function: Expression) -> Result<Expression, ParseError> {
+        let token = self.cur_token.clone();
+        let arguments = self.parse_call_arguments()?;
+        Ok(Expression::CallExpression(token, Box::new(function), arguments))
+    }
+    
+    fn parse_call_arguments(&mut self) -> Result<Vec<Expression>, ParseError> {
+        let mut args = Vec::new();
+        
+        if self.peek_token_is(&RightParen) {
+            self.next_token();
+            return Ok(args);
+        }
+        
+        self.next_token();
+        args.push(self.parse_expression(Lowest)?.clone());
+        
+        while self.peek_token_is(&Comma) {
+            self.next_token();
+            self.next_token();
+            args.push(self.parse_expression(Lowest)?.clone());
+        }
+        
+        if !self.expect_peek(&RightParen) {
+            return Err("Failed to parse function arguments".to_string())
+        }
+        
+        Ok(args)
     }
 
     fn cur_token_is(&self, token_type: &TokenType) -> bool {

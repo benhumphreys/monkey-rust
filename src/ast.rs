@@ -14,6 +14,7 @@ pub enum Expression {
     InfixExpression(Token, Box<Expression>, String, Box<Expression>),
     IfExpression(Token, Box<Expression>, BlockStatement, Option<BlockStatement>),
     FunctionLiteral(Token, Vec<Identifier>, BlockStatement),
+    CallExpression(Token, Box<Expression>, Vec<Expression>),
     Nil, // TODO: Work out if this can be replaced with error handling
 }
 
@@ -27,6 +28,7 @@ impl Node for Expression {
             Expression::InfixExpression(token, _, _, _) => { token.literal.clone() }
             Expression::IfExpression(token, _, _, _) => { token.literal.clone() }
             Expression::FunctionLiteral(token, _, _) => { token.literal.clone() }
+            Expression::CallExpression(token, _, _) => { token.literal.clone() }
             Expression::Nil => { "Nil".to_string() }
         }
     }
@@ -54,13 +56,22 @@ impl Display for Expression {
             Expression::FunctionLiteral(token, parameters, body) => {
                 write!(f, "{}({}) {}",
                        token.literal,
-                       parameters.
-                           iter().
-                           map(|id| id.to_string())
+                       parameters
+                           .iter()
+                           .map(|id| id.to_string())
                            .collect::<Vec<String>>()
-                           .join(","),
+                           .join(", "),
                        body)
             },
+            Expression::CallExpression(_, function, arguments) => {
+                write!(f, "{}({})",
+                       function.to_string(),
+                       arguments
+                           .iter()
+                           .map(|id| id.to_string())
+                           .collect::<Vec<String>>()
+                           .join(", "))
+            }
             Expression::Nil => write!(f, "Nil"),
         }
     }
@@ -305,6 +316,32 @@ pub struct FunctionLiteral {
 impl Node for FunctionLiteral {
     fn token_literal(&self) -> String {
         self.token.literal.clone()
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct CallExpression {
+    token: Token,
+    function: Expression,
+    arguments: Vec<Expression>
+}
+
+impl Node for CallExpression {
+    fn token_literal(&self) -> String {
+        self.token.literal.clone()
+    }
+}
+
+
+impl Display for CallExpression {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}({})",
+               self.function.to_string(),
+               self.arguments
+                   .iter()
+                   .map(|id| id.to_string())
+                   .collect::<Vec<String>>()
+                   .join(","))
     }
 }
 
