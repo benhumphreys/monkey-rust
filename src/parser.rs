@@ -1,5 +1,6 @@
 use crate::ast;
-use crate::ast::{BlockStatement, Expression, Program};
+use crate::ast::Expression::FunctionLiteral;
+use crate::ast::{BlockStatement, Expression, Identifier, Program};
 use crate::lexer::Lexer;
 use crate::parser::Precedence::Lowest;
 use crate::token::TokenType::*;
@@ -64,6 +65,7 @@ impl Parser {
         p.register_prefix(False, Parser::parse_boolean_expression);
         p.register_prefix(LeftParen, Parser::parse_grouped_expression);
         p.register_prefix(If, Parser::parse_if_expression);
+        p.register_prefix(Function, Parser::parse_function_literal);
 
         p.register_infix(Plus, Parser::parse_infix_expression);
         p.register_infix(Minus, Parser::parse_infix_expression);
@@ -163,7 +165,7 @@ impl Parser {
                 return left_exp;
             }
 
-            let infix_fn_unwrapped = infix_fn.unwrap().clone();
+            let infix_fn_unwrapped = *infix_fn.unwrap();
 
             self.next_token();
             left_exp = infix_fn_unwrapped(self, left_exp?);
@@ -313,6 +315,54 @@ impl Parser {
         }
 
         Ok(BlockStatement::new(token, statements))
+    }
+
+    fn parse_function_literal(&mut self) -> Result<Expression, ParseError> {
+        let token = self.cur_token.clone();
+
+        if !self.expect_peek(&LeftParen) {
+            return Ok(Expression::Nil);
+        }
+
+        let parameters = self.parse_function_parameters();
+        if !self.expect_peek(&LeftBrace) {
+            return Ok(Expression::Nil);
+        }
+
+        let body = self.parse_block_statement();
+        Ok(FunctionLiteral(token, parameters?, body?))
+    }
+
+    fn parse_function_parameters(&mut self) -> Result<Vec<Identifier>, ParseError> {
+        let mut identifiers = Vec::new();
+
+        if self.peek_token_is(&RightParen) {
+            self.next_token();
+            return Ok(identifiers);
+        }
+
+        self.next_token();
+
+        identifiers.push(Identifier::new(
+            self.cur_token.clone(),
+            self.cur_token.literal.clone(),
+        ));
+
+        while self.peek_token_is(&Comma) {
+            self.next_token();
+            self.next_token();
+
+            identifiers.push(Identifier::new(
+                self.cur_token.clone(),
+                self.cur_token.literal.clone(),
+            ));
+        }
+
+        if !self.expect_peek(&RightParen) {
+            return Err("Failed to parse function parameters".to_string());
+        }
+
+        Ok(identifiers)
     }
 
     fn cur_token_is(&self, token_type: &TokenType) -> bool {

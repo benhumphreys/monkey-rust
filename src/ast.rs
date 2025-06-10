@@ -13,6 +13,7 @@ pub enum Expression {
     PrefixExpression(Token, String, Box<Expression>),
     InfixExpression(Token, Box<Expression>, String, Box<Expression>),
     IfExpression(Token, Box<Expression>, BlockStatement, Option<BlockStatement>),
+    FunctionLiteral(Token, Vec<Identifier>, BlockStatement),
     Nil, // TODO: Work out if this can be replaced with error handling
 }
 
@@ -25,6 +26,7 @@ impl Node for Expression {
             Expression::PrefixExpression(token, _, _) => { token.literal.clone() }
             Expression::InfixExpression(token, _, _, _) => { token.literal.clone() }
             Expression::IfExpression(token, _, _, _) => { token.literal.clone() }
+            Expression::FunctionLiteral(token, _, _) => { token.literal.clone() }
             Expression::Nil => { "Nil".to_string() }
         }
     }
@@ -49,6 +51,16 @@ impl Display for Expression {
                 }
                 Ok(())
             },
+            Expression::FunctionLiteral(token, parameters, body) => {
+                write!(f, "{}({}) {}",
+                       token.literal,
+                       parameters.
+                           iter().
+                           map(|id| id.to_string())
+                           .collect::<Vec<String>>()
+                           .join(","),
+                       body)
+            },
             Expression::Nil => write!(f, "Nil"),
         }
     }
@@ -58,6 +70,15 @@ impl Display for Expression {
 pub struct Identifier {
     pub token: Token,
     pub value: String,
+}
+
+impl Identifier {
+    pub fn new(token: Token, value: String) -> Identifier {
+        Identifier {
+            token,
+            value
+        }
+    }    
 }
 
 impl Display for Identifier {
@@ -268,6 +289,20 @@ impl Display for IfExpression {
 }
 
 impl Node for IfExpression {
+    fn token_literal(&self) -> String {
+        self.token.literal.clone()
+    }
+}
+
+
+#[derive(Debug, Clone)]
+pub struct FunctionLiteral {
+    token: Token,
+    parameters: Vec<Identifier>,
+    body: BlockStatement
+}
+
+impl Node for FunctionLiteral {
     fn token_literal(&self) -> String {
         self.token.literal.clone()
     }

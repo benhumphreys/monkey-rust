@@ -1,11 +1,11 @@
 #![allow(dead_code)]
 
-use std::ops::Deref;
 use monkey::ast;
-use monkey::ast::{Expression, Node, Program, Statement};
 use monkey::ast::Statement::ExpressionStatement;
+use monkey::ast::{Expression, Node, Program, Statement};
 use monkey::lexer::Lexer;
 use monkey::parser::Parser;
+use std::ops::Deref;
 
 #[test]
 fn test_let_statements() {
@@ -44,7 +44,7 @@ fn test_return_statements() {
 fn test_identifier_expression() {
     let code = "foobar;";
     let expression = parse_single_expression_program(code);
-    
+
     assert_identifier(&expression, "foobar");
 }
 
@@ -52,17 +52,17 @@ fn test_identifier_expression() {
 fn test_integer_literal_expression() {
     let code = "5;";
     let expression = parse_single_expression_program(code);
-    
+
     assert_integer_literal(&expression, 5);
 }
 
 #[test]
 fn test_parsing_prefix_expressions() {
     let test_cases = vec![
-            ("!5", "!", Value::Integer(5)),
-            ("-15", "-", Value::Integer(15)),
-            ("!true", "!", Value::Boolean(true)),
-            ("!false", "!", Value::Boolean(false))
+        ("!5", "!", Value::Integer(5)),
+        ("-15", "-", Value::Integer(15)),
+        ("!true", "!", Value::Boolean(true)),
+        ("!false", "!", Value::Boolean(false)),
     ];
 
     for test_case in test_cases {
@@ -91,9 +91,24 @@ fn test_parsing_infix_expressions() {
         ("5 < 5;", Value::Integer(5), "<", Value::Integer(5)),
         ("5 == 5;", Value::Integer(5), "==", Value::Integer(5)),
         ("5 != 5;", Value::Integer(5), "!=", Value::Integer(5)),
-        ("true == true", Value::Boolean(true), "==", Value::Boolean(true)),
-        ("true != false", Value::Boolean(true), "!=", Value::Boolean(false)),
-        ("false == false", Value::Boolean(false), "==", Value::Boolean(false)),
+        (
+            "true == true",
+            Value::Boolean(true),
+            "==",
+            Value::Boolean(true),
+        ),
+        (
+            "true != false",
+            Value::Boolean(true),
+            "!=",
+            Value::Boolean(false),
+        ),
+        (
+            "false == false",
+            Value::Boolean(false),
+            "==",
+            Value::Boolean(false),
+        ),
     ];
 
     for test_case in test_cases {
@@ -103,10 +118,12 @@ fn test_parsing_infix_expressions() {
         let expected_right_value = test_case.3;
 
         let expression = parse_single_expression_program(test_code);
-        assert_infix_expression(&expression,
-        expected_left_value,
-        expected_operator,
-        expected_right_value);
+        assert_infix_expression(
+            &expression,
+            expected_left_value,
+            expected_operator,
+            expected_right_value,
+        );
     }
 }
 
@@ -136,7 +153,7 @@ fn test_operator_precedence_parsing() {
         ("2 / (5 + 5)", "(2 / (5 + 5))"),
         ("(5 + 5) * 2 * (5 + 5)", "(((5 + 5) * 2) * (5 + 5))"),
         ("-(5 + 5)", "(-(5 + 5))"),
-        ("!(true == true)", "(!(true == true))")
+        ("!(true == true)", "(!(true == true))"),
     ];
 
     for test_case in test_cases {
@@ -168,8 +185,13 @@ fn test_if_expression() {
 
     if let Expression::IfExpression(_, condition, consequence, alternative) = expression {
         // Verify condition
-        assert_infix_expression(condition.deref(), Value::String("x".to_string()), "<", Value::String("y".to_string()));
-       
+        assert_infix_expression(
+            condition.deref(),
+            Value::String("x".to_string()),
+            "<",
+            Value::String("y".to_string()),
+        );
+
         // Verify consequence
         assert_eq!(consequence.statements.len(), 1);
         let consequence_stmt = &consequence.statements[0];
@@ -178,7 +200,7 @@ fn test_if_expression() {
         } else {
             panic!("Expression not IfExpression. Got={:?}", consequence_stmt);
         }
-        
+
         // Verify alternative is not present
         if alternative.is_some() {
             panic!("Alternative not empty. Got={:?}", alternative.unwrap())
@@ -195,10 +217,12 @@ fn test_if_else_expression() {
 
     if let Expression::IfExpression(_, condition, consequence, maybe_alternative) = expression {
         // Verify condition
-        assert_infix_expression(condition.deref(),
-                                Value::String("x".to_string()),
-                                "<",
-                                Value::String("y".to_string()));
+        assert_infix_expression(
+            condition.deref(),
+            Value::String("x".to_string()),
+            "<",
+            Value::String("y".to_string()),
+        );
 
         // Verify consequence
         assert_eq!(consequence.statements.len(), 1);
@@ -206,7 +230,10 @@ fn test_if_else_expression() {
         if let ExpressionStatement(_, consequence_expr) = consequence_stmt {
             assert_identifier(&consequence_expr, "x");
         } else {
-            panic!("Expression not ExpressionStatement. Got={:?}", consequence_stmt);
+            panic!(
+                "Expression not ExpressionStatement. Got={:?}",
+                consequence_stmt
+            );
         }
 
         // Verify alternative
@@ -216,10 +243,68 @@ fn test_if_else_expression() {
         if let ExpressionStatement(_, alternative_expr) = alternative_stmt {
             assert_identifier(&alternative_expr, "y");
         } else {
-            panic!("Expression not ExpressionStatement. Got={:?}", alternative_stmt);
+            panic!(
+                "Expression not ExpressionStatement. Got={:?}",
+                alternative_stmt
+            );
         }
     } else {
         panic!("Expression not IfExpression. Got={:?}", expression);
+    }
+}
+
+#[test]
+fn test_function_literal_parsing() {
+    let input = "fn(x, y) { x + y; }";
+    let expression = parse_single_expression_program(input);
+
+    if let Expression::FunctionLiteral(_, parameters, body) = expression {
+        // Verify parameters
+        assert_eq!(parameters.len(), 2);
+        assert_literal_expression(
+            &Expression::Identifier(parameters[0].token.clone(), parameters[0].value.clone()),
+            &Value::String("x".to_string()),
+        );
+        assert_literal_expression(
+            &Expression::Identifier(parameters[1].token.clone(), parameters[1].value.clone()),
+            &Value::String("y".to_string()),
+        );
+
+        // Verify body
+        assert_eq!(body.statements.len(), 1);
+        let stmt = body.statements[0].clone();
+        if let Statement::ExpressionStatement(_, expression) = stmt {
+            assert_infix_expression(
+                &expression,
+                Value::String("x".to_string()),
+                "+",
+                Value::String("y".to_string()),
+            );
+        }
+    } else {
+        panic!("Expression not FunctionLiteral. Got={:?}", expression);
+    }
+}
+
+#[test]
+fn test_function_parameter_parsing() {
+    let test_cases = vec![
+        ("fn() {}", vec![]),
+        ("fn(x) {}", vec!["x"]),
+        ("fn(x, y, z) {}", vec!["x", "y", "z"]),
+    ];
+    
+    for test_case in test_cases {
+        let test_input = test_case.0;
+        let expected_parameters = test_case.1;
+        
+        let expression = parse_single_expression_program(test_input);
+        if let Expression::FunctionLiteral(_, parameters, _) = expression {
+            assert_eq!(parameters.len(), expected_parameters.len());
+            for i in 1..expected_parameters.len() {
+                assert_eq!(parameters[i].value, expected_parameters[i]);
+            }
+        }
     }
 }
 

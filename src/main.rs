@@ -14,7 +14,7 @@ fn main() {
         io::stdout().flush().unwrap();
         
         if let Some(line) = lines.next() {
-            let mut lexer = Lexer::new(String::from(line.unwrap()));
+            let mut lexer = Lexer::new(line.unwrap());
             let mut parser = Parser::new(&mut lexer);
 
             let program = parser.parse_program();
