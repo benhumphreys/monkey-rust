@@ -29,11 +29,38 @@ fn eval_expression(expr: &Expression) -> Object {
         Expression::Identifier(_, _) => {todo!()}
         Expression::IntegerLiteral(_, value) => { Object::Integer(*value) }
         Expression::Boolean(_, value) => { if *value { OBJECT_BOOLEAN_TRUE } else { OBJECT_BOOLEAN_FALSE } }
-        Expression::PrefixExpression(_, _, _) => {todo!()}
+        Expression::PrefixExpression(_, operator, right) => {
+            let evaluated_right = eval_expression(&right);
+            eval_prefix_expression(operator, evaluated_right)
+        }
         Expression::InfixExpression(_, _, _, _) => {todo!()}
         Expression::IfExpression(_, _, _, _) => {todo!()}
         Expression::FunctionLiteral(_, _, _) => {todo!()}
         Expression::CallExpression(_, _, _) => {todo!()}
         Expression::Nil => {todo!()}
+    }
+}
+
+fn eval_prefix_expression(operator: &str, right: Object) -> Object {
+    match operator {
+        "!" => { eval_bang_operator_expression(right)}
+        "-" => { eval_minus_prefix_operator_expression(right)}
+        _ => {panic!()}
+    }
+}
+
+fn eval_bang_operator_expression(right: Object) -> Object {
+    match right {
+        Object::Boolean(value) => { if value { OBJECT_BOOLEAN_FALSE } else { OBJECT_BOOLEAN_TRUE } },
+        Object::Null => OBJECT_BOOLEAN_TRUE,
+        _ => OBJECT_BOOLEAN_FALSE
+    }
+}
+
+fn eval_minus_prefix_operator_expression(right: Object) -> Object {
+    if let Object::Integer(value) = right {
+        Object::Integer(-value)
+    } else {
+       panic!()
     }
 }

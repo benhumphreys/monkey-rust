@@ -7,7 +7,12 @@ use monkey::parser::Parser;
 
 #[test]
 fn test_eval_integer_expression() {
-    let test_cases = vec![("5", 5i64), ("10", 10i64)];
+    let test_cases = vec![
+        ("5", 5i64),
+        ("10", 10i64),
+        ("-5", -5i64),
+        ("-10", -10i64)
+    ];
 
     for test_case in test_cases {
         let test_input = test_case.0;
@@ -20,6 +25,25 @@ fn test_eval_integer_expression() {
 #[test]
 fn test_eval_boolean_expression() {
     let test_cases = vec![("true", true), ("false", false)];
+
+    for test_case in test_cases {
+        let test_input = test_case.0;
+        let expected = test_case.1;
+        let evaluated = eval_input(test_input);
+        assert_boolean_object(evaluated, expected)
+    }
+}
+
+#[test]
+fn test_bang_operator() {
+    let test_cases = vec![
+        ("!true", false),
+        ("!false", true),
+        ("!5", false),
+        ("!!true", true),
+        ("!!false", false),
+        ("!!5", true),
+    ];
 
     for test_case in test_cases {
         let test_input = test_case.0;
