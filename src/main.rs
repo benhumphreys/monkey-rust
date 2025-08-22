@@ -2,13 +2,15 @@
 
 use std::io;
 use std::io::{BufRead, Write};
+use monkey::evaluator::eval_program;
 use monkey::lexer::Lexer;
 use monkey::parser::{ParseError, Parser};
 
 fn main() {
     let stdin = io::stdin();
     let mut lines = stdin.lock().lines();
-    
+
+    println!("Monkey programming language");
     loop {
         print!(">> ");
         io::stdout().flush().unwrap();
@@ -22,8 +24,8 @@ fn main() {
                 print_parser_errors(&parser.errors());
                 continue;
             }
-
-            println!("{:?}", program);
+            let evaluated = eval_program(&program);
+            println!("{}", evaluated.to_string());
         } else {
             break;
         }
