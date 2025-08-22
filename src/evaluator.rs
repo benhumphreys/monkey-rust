@@ -2,10 +2,13 @@
 
 use crate::ast::{Expression, Program, Statement};
 use crate::object::Object;
-use crate::object::Object::Null;
+
+const OBJECT_BOOLEAN_TRUE: Object = Object::Boolean(true);
+const OBJECT_BOOLEAN_FALSE: Object = Object::Boolean(false);
+const OBJECT_NULL: Object = Object::Null;
 
 pub fn eval_program(program: &Program) -> Object {
-    let mut result: Box<Object> = Box::new(Null);
+    let mut result: Box<Object> = Box::new(OBJECT_NULL);
     for stmt in program.statements.clone() {
         result = Box::new(eval_statement(&stmt));
     }
@@ -24,8 +27,8 @@ fn eval_statement(stmt: &Statement) -> Object {
 fn eval_expression(expr: &Expression) -> Object {
     match expr {
         Expression::Identifier(_, _) => {todo!()}
-        Expression::IntegerLiteral(_, value) => { Object::Integer(*value)}
-        Expression::Boolean(_, _) => {todo!()}
+        Expression::IntegerLiteral(_, value) => { Object::Integer(*value) }
+        Expression::Boolean(_, value) => { if *value { OBJECT_BOOLEAN_TRUE } else { OBJECT_BOOLEAN_FALSE } }
         Expression::PrefixExpression(_, _, _) => {todo!()}
         Expression::InfixExpression(_, _, _, _) => {todo!()}
         Expression::IfExpression(_, _, _, _) => {todo!()}

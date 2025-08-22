@@ -11,9 +11,29 @@ fn test_eval_integer_expression() {
 
     for test_case in test_cases {
         let test_input = test_case.0;
-        let expected_integer = test_case.1;
+        let expected = test_case.1;
         let evaluated = eval_input(test_input);
-        assert_integer_object(evaluated, expected_integer)
+        assert_integer_object(evaluated, expected)
+    }
+}
+
+#[test]
+fn test_eval_boolean_expression() {
+    let test_cases = vec![("true", true), ("false", false)];
+
+    for test_case in test_cases {
+        let test_input = test_case.0;
+        let expected = test_case.1;
+        let evaluated = eval_input(test_input);
+        assert_boolean_object(evaluated, expected)
+    }
+}
+
+fn assert_boolean_object(object: Object, expected: bool) {
+    if let Object::Boolean(value) = object {
+        assert_eq!(value, expected);
+    } else {
+        panic!("Object not Boolean. Got={:?}", object);
     }
 }
 
