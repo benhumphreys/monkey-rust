@@ -33,11 +33,44 @@ fn eval_expression(expr: &Expression) -> Object {
             let evaluated_right = eval_expression(&right);
             eval_prefix_expression(operator, evaluated_right)
         }
-        Expression::InfixExpression(_, _, _, _) => {todo!()}
+        Expression::InfixExpression(_, left, operator, right) => {
+            let evaluated_left = eval_expression(&left);
+            let evaluated_right = eval_expression(&right);
+            eval_infix_expression(operator, evaluated_left, evaluated_right)
+        }
         Expression::IfExpression(_, _, _, _) => {todo!()}
         Expression::FunctionLiteral(_, _, _) => {todo!()}
         Expression::CallExpression(_, _, _) => {todo!()}
         Expression::Nil => {todo!()}
+    }
+}
+
+fn eval_infix_expression(operator: &str, left: Object, right: Object) -> Object {
+    let maybe_left = object_to_int(&left);
+    let maybe_right = object_to_int(&right);
+
+    if maybe_left.is_some() && maybe_right.is_some() {
+        return eval_integer_infix_expression(operator, maybe_left.unwrap(), maybe_right.unwrap())
+    } else if operator == "==" {
+        return Object::Boolean(left == right);
+    } else  if operator == "!=" {
+        return Object::Boolean(left != right);
+    }
+
+    OBJECT_NULL
+}
+
+fn eval_integer_infix_expression(operator: &str, left: i64, right: i64) -> Object {
+    match operator {
+        "+" => Object::Integer(left + right),
+        "-" => Object::Integer(left - right),
+        "*" => Object::Integer(left * right),
+        "/" => Object::Integer(left / right),
+        "<" => Object::Boolean(left < right),
+        ">" => Object::Boolean(left > right),
+        "==" => Object::Boolean(left == right),
+        "!=" => Object::Boolean(left != right),
+        _ => {panic!()}
     }
 }
 
@@ -62,5 +95,13 @@ fn eval_minus_prefix_operator_expression(right: Object) -> Object {
         Object::Integer(-value)
     } else {
        panic!()
+    }
+}
+
+fn object_to_int(object: &Object) -> Option<i64> {
+    if let Object::Integer(value) = object {
+        Some(*value)
+    } else {
+        None
     }
 }
