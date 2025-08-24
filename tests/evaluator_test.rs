@@ -84,6 +84,33 @@ fn test_bang_operator() {
     }
 }
 
+#[test]
+fn test_if_else_expressions() {
+    let test_cases = vec![
+        ("if (true) { 10 }", Some(10)),
+        ("if (false) { 10 }", None),
+        ("if (1) { 10 }", Some(10)),
+        ("if (1 < 2) { 10 }", Some(10)),
+        ("if (1 > 2) { 10 }", None),
+        ("if (1 > 2) { 10 } else { 20 }", Some(20)),
+        ("if (1 < 2) { 10 } else { 20 }", Some(10))
+    ];
+
+    for test_case in test_cases {
+        let test_input = test_case.0;
+        let expected = test_case.1;
+        let evaluated = eval_input(test_input);
+        match expected {
+            Some(expected_int) => { assert_integer_object(evaluated, expected_int) }
+            None => { assert_null_object(evaluated) }
+        }
+    }
+}
+
+fn assert_null_object(object: Object) {
+    assert!(matches!(object, Object::Null), "Expected Null object, x Got: {:?}", object);
+}
+
 fn assert_boolean_object(object: Object, expected: bool) {
     if let Object::Boolean(value) = object {
         assert_eq!(value, expected);

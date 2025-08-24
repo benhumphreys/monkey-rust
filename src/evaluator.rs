@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 
-use crate::ast::{Expression, Program, Statement};
+use crate::ast::{BlockStatement, Expression, Program, Statement};
 use crate::object::Object;
 
 const OBJECT_BOOLEAN_TRUE: Object = Object::Boolean(true);
@@ -17,11 +17,19 @@ pub fn eval_program(program: &Program) -> Object {
 
 fn eval_statement(stmt: &Statement) -> Object {
     match stmt {
-        Statement::LetStatement(_, _, _) => {todo!()}
-        Statement::ReturnStatement(_, _) => {todo!()}
+        Statement::LetStatement(_, ident, expression) => {todo!()}
+        Statement::ReturnStatement(_, expression) => {todo!()}
         Statement::ExpressionStatement(_, expression) => { eval_expression(expression)}
-        Statement::BlockStatement(_, _) => {todo!()}
+        Statement::BlockStatement(_, statements) => { eval_statements(statements) }
     }
+}
+
+fn eval_statements(statements: &Vec<Statement>) -> Object {
+    let mut result: Box<Object> = Box::new(OBJECT_NULL);
+    for stmt in statements {
+        result = Box::new(eval_statement(&stmt));
+    }
+    *result
 }
 
 fn eval_expression(expr: &Expression) -> Object {
@@ -38,10 +46,22 @@ fn eval_expression(expr: &Expression) -> Object {
             let evaluated_right = eval_expression(&right);
             eval_infix_expression(operator, evaluated_left, evaluated_right)
         }
-        Expression::IfExpression(_, _, _, _) => {todo!()}
+        Expression::IfExpression(_, condition, consequence, alternative) => {
+            eval_if_expression(condition, consequence, alternative)
+        }
         Expression::FunctionLiteral(_, _, _) => {todo!()}
         Expression::CallExpression(_, _, _) => {todo!()}
         Expression::Nil => {todo!()}
+    }
+}
+
+fn eval_if_expression(condition: &Expression, consequence: &BlockStatement, alternative: &Option<BlockStatement>) -> Object {
+    if is_truthy(&eval_expression(&condition)) {
+        eval_statements(&consequence.statements)
+    } else if let Some(alternative_block) = alternative {
+        eval_statements(&alternative_block.statements)
+    } else {
+        OBJECT_NULL
     }
 }
 
@@ -103,5 +123,13 @@ fn object_to_int(object: &Object) -> Option<i64> {
         Some(*value)
     } else {
         None
+    }
+}
+
+fn is_truthy(object: &Object) -> bool {
+    match object {
+        Object::Boolean(value) => *value,
+        Object::Null => false,
+        _ => true
     }
 }
