@@ -25,7 +25,7 @@ fn main() {
                 continue;
             }
             let evaluated = eval_program(&program);
-            println!("{}", evaluated.to_string());
+            println!("{}", evaluated);
         } else {
             break;
         }

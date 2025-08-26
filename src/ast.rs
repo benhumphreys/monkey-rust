@@ -41,10 +41,10 @@ impl Display for Expression {
             Expression::IntegerLiteral(_, value) => write!(f, "{}", value),
             Expression::Boolean(_, value) => write!(f, "{}", value),
             Expression::PrefixExpression(_, operator, right) => {
-                write!(f, "({}{})", operator, right.to_string())
+                write!(f, "({}{})", operator, right)
             }
             Expression::InfixExpression(_, left, operator, right) => {
-                write!(f, "({} {} {})", left.to_string(), operator, right.to_string())
+                write!(f, "({} {} {})", left, operator, right)
             },
             Expression::IfExpression(_, condition, consequence, alternative) => {
                 write!(f, "if{} {}", condition, consequence)?;
@@ -65,7 +65,7 @@ impl Display for Expression {
             },
             Expression::CallExpression(_, function, arguments) => {
                 write!(f, "{}({})",
-                       function.to_string(),
+                       function,
                        arguments
                            .iter()
                            .map(|id| id.to_string())
@@ -147,7 +147,7 @@ impl Node for PrefixExpression {
 
 impl Display for PrefixExpression {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "({}{})", self.operator, self.right.to_string())
+        write!(f, "({}{})", self.operator, self.right)
     }
 }
 
@@ -167,7 +167,7 @@ impl Node for InfixExpression {
 
 impl Display for InfixExpression {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "({} {} {})", self.left.to_string(), self.operator, self.right.to_string())
+        write!(f, "({} {} {})", self.left, self.operator, self.right)
     }
 }
 
@@ -222,15 +222,7 @@ impl Display for Statement {
             Statement::LetStatement(_, id, expr) => write!(f, "let {} = {};", id, expr),
             Statement::ReturnStatement(_, expr) => write!(f, "return {};", expr),
             Statement::ExpressionStatement(_, expr) => write!(f, "{}", expr),
-            Statement::BlockStatement(_, stmts) => {
-                let formatted_statements = stmts
-                    .iter()
-                    .map(|stmt| stmt.to_string())
-                    .collect::<Vec<String>>()
-                    .join("");
-
-                write!(f, "{}", formatted_statements)
-            }
+            Statement::BlockStatement(_, stmts) =>  write!(f, "{}", format_statements(stmts))
         }
     }
 }
@@ -256,10 +248,10 @@ pub struct BlockStatement {
 impl BlockStatement {
     pub fn new(token: Token, statements: Vec<Statement>) -> BlockStatement {
         BlockStatement {
-            token: token,
-            statements: statements
+            token,
+            statements
         }
-    }    
+    }
 }
 
 impl Display for BlockStatement {
@@ -336,7 +328,7 @@ impl Node for CallExpression {
 impl Display for CallExpression {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}({})",
-               self.function.to_string(),
+               self.function,
                self.arguments
                    .iter()
                    .map(|id| id.to_string())
@@ -367,13 +359,14 @@ impl Program {
 
 impl Display for Program {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        let formatted_statements = self
-            .statements
-            .iter()
-            .map(|stmt| stmt.to_string())
-            .collect::<Vec<String>>()
-            .join("");
-
-        write!(f, "{}", formatted_statements)
+        write!(f, "{}", format_statements(&self.statements))
     }
+}
+
+fn format_statements(statements: &Vec<Statement>) -> String {
+    statements
+        .iter()
+        .map(|stmt| stmt.to_string())
+        .collect::<Vec<String>>()
+        .join("")
 }

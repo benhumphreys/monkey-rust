@@ -8,16 +8,16 @@ const OBJECT_BOOLEAN_FALSE: Object = Object::Boolean(false);
 const OBJECT_NULL: Object = Object::Null;
 
 pub fn eval_program(program: &Program) -> Object {
-    let mut result: Box<Object> = Box::new(OBJECT_NULL);
+    let mut result = OBJECT_NULL;
 
     for stmt in program.statements.clone() {
-        result = Box::new(eval_statement(&stmt));
-        if let Object::ReturnValue(value) = *result {
+        result = eval_statement(&stmt);
+        if let Object::ReturnValue(value) = result {
             return *value;
         }
     }
 
-    *result
+    result
 }
 
 fn eval_statement(stmt: &Statement) -> Object {
@@ -35,7 +35,7 @@ fn eval_statement(stmt: &Statement) -> Object {
 }
 
 fn eval_block_statement(block_statement: BlockStatement) -> Object {
-    let mut result: Object = OBJECT_NULL;
+    let mut result = OBJECT_NULL;
 
     for stmt in block_statement.statements {
         result = eval_statement(&stmt);
@@ -52,12 +52,12 @@ fn eval_expression(expr: &Expression) -> Object {
         Expression::IntegerLiteral(_, value) => { Object::Integer(*value) }
         Expression::Boolean(_, value) => { if *value { OBJECT_BOOLEAN_TRUE } else { OBJECT_BOOLEAN_FALSE } }
         Expression::PrefixExpression(_, operator, right) => {
-            let evaluated_right = eval_expression(&right);
+            let evaluated_right = eval_expression(right);
             eval_prefix_expression(operator, evaluated_right)
         }
         Expression::InfixExpression(_, left, operator, right) => {
-            let evaluated_left = eval_expression(&left);
-            let evaluated_right = eval_expression(&right);
+            let evaluated_left = eval_expression(left);
+            let evaluated_right = eval_expression(right);
             eval_infix_expression(operator, evaluated_left, evaluated_right)
         }
         Expression::IfExpression(_, condition, consequence, alternative) => {
@@ -70,12 +70,12 @@ fn eval_expression(expr: &Expression) -> Object {
 }
 
 fn eval_if_expression(condition: &Expression, consequence: &BlockStatement, alternative: &Option<BlockStatement>) -> Object {
-    if is_truthy(&eval_expression(&condition)) {
-        return eval_block_statement(consequence.clone())
+    if is_truthy(&eval_expression(condition)) {
+        eval_block_statement(consequence.clone())
     } else if let Some(alternative_block) = alternative {
-        return eval_block_statement(alternative_block.clone())
+        eval_block_statement(alternative_block.clone())
     } else {
-        return OBJECT_NULL
+        OBJECT_NULL
     }
 }
 
