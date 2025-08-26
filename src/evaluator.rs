@@ -84,7 +84,6 @@ fn eval_expression(expr: &Expression) -> Object {
         }
         Expression::FunctionLiteral(_, _, _) => {todo!()}
         Expression::CallExpression(_, _, _) => {todo!()}
-        Expression::Nil => {todo!()}
     }
 }
 

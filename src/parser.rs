@@ -1,11 +1,9 @@
-use crate::ast;
 use crate::ast::Expression::FunctionLiteral;
-use crate::ast::{BlockStatement, Expression, Identifier, Program};
+use crate::ast::{BlockStatement, Expression, Identifier, Program, Statement};
 use crate::lexer::Lexer;
 use crate::parser::Precedence::Lowest;
 use crate::token::TokenType::*;
 use crate::token::{Token, TokenType};
-use ast::Statement;
 use std::collections::HashMap;
 
 pub type ParseError = String;
@@ -91,7 +89,11 @@ impl Parser {
             let stmt = self.parse_statement();
             match stmt {
                 Ok(s) => program.statements.push(s),
-                Err(e) => self.errors.push(e),
+                Err(e) => {
+                    if !self.errors.is_empty() {
+                        self.errors.push(e)
+                    }
+            },
             }
             self.next_token()
         }
@@ -259,7 +261,7 @@ impl Parser {
         let expression = self.parse_expression(Lowest);
 
         if !self.expect_peek(&RightParen) {
-            return Err(ParseError::from("Expected right paren"));
+            return Err(ParseError::default());
         }
         expression
     }
@@ -268,18 +270,18 @@ impl Parser {
         let token = self.cur_token.clone();
 
         if !self.expect_peek(&LeftParen) {
-            return Ok(Expression::Nil);
+            return Err(ParseError::default());
         }
 
         self.next_token();
         let condition = self.parse_expression(Lowest)?;
 
         if !self.expect_peek(&RightParen) {
-            return Ok(Expression::Nil);
+            return Err(ParseError::default());
         }
 
         if !self.expect_peek(&LeftBrace) {
-            return Ok(Expression::Nil);
+            return Err(ParseError::default());
         }
 
         let consequence = self.parse_block_statement()?;
@@ -289,7 +291,7 @@ impl Parser {
             self.next_token();
 
             if !self.expect_peek(&LeftBrace) {
-                return Ok(Expression::Nil);
+                return Err(ParseError::default());
             }
             alternative = Some(self.parse_block_statement()?);
         }
@@ -323,12 +325,12 @@ impl Parser {
         let token = self.cur_token.clone();
 
         if !self.expect_peek(&LeftParen) {
-            return Ok(Expression::Nil);
+            return Err(ParseError::default());
         }
 
         let parameters = self.parse_function_parameters();
         if !self.expect_peek(&LeftBrace) {
-            return Ok(Expression::Nil);
+            return Err(ParseError::default());
         }
 
         let body = self.parse_block_statement();
@@ -361,7 +363,7 @@ impl Parser {
         }
 
         if !self.expect_peek(&RightParen) {
-            return Err("Failed to parse function parameters".to_string());
+            return Err(ParseError::default());
         }
 
         Ok(identifiers)

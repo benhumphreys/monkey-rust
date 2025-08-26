@@ -15,7 +15,6 @@ pub enum Expression {
     IfExpression(Token, Box<Expression>, BlockStatement, Option<BlockStatement>),
     FunctionLiteral(Token, Vec<Identifier>, BlockStatement),
     CallExpression(Token, Box<Expression>, Vec<Expression>),
-    Nil, // TODO: Work out if this can be replaced with error handling
 }
 
 impl Node for Expression {
@@ -29,7 +28,6 @@ impl Node for Expression {
             Expression::IfExpression(token, _, _, _) => { token.literal.clone() }
             Expression::FunctionLiteral(token, _, _) => { token.literal.clone() }
             Expression::CallExpression(token, _, _) => { token.literal.clone() }
-            Expression::Nil => { "Nil".to_string() }
         }
     }
 }
@@ -72,7 +70,6 @@ impl Display for Expression {
                            .collect::<Vec<String>>()
                            .join(", "))
             }
-            Expression::Nil => write!(f, "Nil"),
         }
     }
 }
