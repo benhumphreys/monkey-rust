@@ -129,6 +129,41 @@ fn test_return_statements() {
     }
 }
 
+#[test]
+fn test_error_handling() {
+    let test_cases = vec![
+        ("5 + true;", "type mismatch: INTEGER + BOOLEAN"),
+        ("5 + true; 5;", "type mismatch: INTEGER + BOOLEAN"),
+        ("-true", "unknown operator: -BOOLEAN"),
+        ("true + false;", "unknown operator: BOOLEAN + BOOLEAN"),
+        ("5; true + false; 5", "unknown operator: BOOLEAN + BOOLEAN"),
+        ("if (10 > 1) { true + false; }", "unknown operator: BOOLEAN + BOOLEAN"),
+        ("if (10 > 1) {
+                          if (10 > 1) {
+                            return true + false;
+                          }
+
+                          return 1;
+                        }",
+         "unknown operator: BOOLEAN + BOOLEAN")
+    ];
+
+    for test_case in test_cases {
+        let test_input = test_case.0;
+        let expected = test_case.1;
+        let evaluated = eval_input(test_input);
+        assert_error_object(evaluated, expected, test_input);
+    }
+}
+
+fn assert_error_object(object: Object, expected_message: &str, test_input: &str) {
+    if let Object::Error(value) = object {
+        assert_eq!(value, expected_message, "Test input: {}", test_input);
+    } else {
+        panic!("Object not Error. Got={:?}", object);
+    }
+}
+
 fn assert_null_object(object: Object) {
     assert!(matches!(object, Object::Null), "Expected Null object, x Got: {:?}", object);
 }

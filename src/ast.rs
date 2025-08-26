@@ -363,7 +363,7 @@ impl Display for Program {
     }
 }
 
-fn format_statements(statements: &Vec<Statement>) -> String {
+fn format_statements(statements: &[Statement]) -> String {
     statements
         .iter()
         .map(|stmt| stmt.to_string())
