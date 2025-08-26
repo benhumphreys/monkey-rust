@@ -9,27 +9,41 @@ const OBJECT_NULL: Object = Object::Null;
 
 pub fn eval_program(program: &Program) -> Object {
     let mut result: Box<Object> = Box::new(OBJECT_NULL);
+
     for stmt in program.statements.clone() {
         result = Box::new(eval_statement(&stmt));
+        if let Object::ReturnValue(value) = *result {
+            return *value;
+        }
     }
+
     *result
 }
 
 fn eval_statement(stmt: &Statement) -> Object {
     match stmt {
         Statement::LetStatement(_, ident, expression) => {todo!()}
-        Statement::ReturnStatement(_, expression) => {todo!()}
+        Statement::ReturnStatement(_, expression) => {
+            let val = eval_expression(expression);
+            Object::ReturnValue(Box::new(val))
+        }
         Statement::ExpressionStatement(_, expression) => { eval_expression(expression)}
-        Statement::BlockStatement(_, statements) => { eval_statements(statements) }
+        Statement::BlockStatement(token, statements) => {
+            eval_block_statement(BlockStatement{token: token.clone(), statements: statements.clone()})
+        }
     }
 }
 
-fn eval_statements(statements: &Vec<Statement>) -> Object {
-    let mut result: Box<Object> = Box::new(OBJECT_NULL);
-    for stmt in statements {
-        result = Box::new(eval_statement(&stmt));
+fn eval_block_statement(block_statement: BlockStatement) -> Object {
+    let mut result: Object = OBJECT_NULL;
+
+    for stmt in block_statement.statements {
+        result = eval_statement(&stmt);
+        if let Object::ReturnValue(_) = result {
+            return result
+        }
     }
-    *result
+    result
 }
 
 fn eval_expression(expr: &Expression) -> Object {
@@ -57,11 +71,11 @@ fn eval_expression(expr: &Expression) -> Object {
 
 fn eval_if_expression(condition: &Expression, consequence: &BlockStatement, alternative: &Option<BlockStatement>) -> Object {
     if is_truthy(&eval_expression(&condition)) {
-        eval_statements(&consequence.statements)
+        return eval_block_statement(consequence.clone())
     } else if let Some(alternative_block) = alternative {
-        eval_statements(&alternative_block.statements)
+        return eval_block_statement(alternative_block.clone())
     } else {
-        OBJECT_NULL
+        return OBJECT_NULL
     }
 }
 

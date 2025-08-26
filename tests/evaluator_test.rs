@@ -29,7 +29,7 @@ fn test_eval_integer_expression() {
         let test_input = test_case.0;
         let expected = test_case.1 as i64;
         let evaluated = eval_input(test_input);
-        assert_integer_object(evaluated, expected)
+        assert_integer_object(evaluated, expected, test_input)
     }
 }
 
@@ -61,7 +61,7 @@ fn test_eval_boolean_expression() {
         let test_input = test_case.0;
         let expected = test_case.1;
         let evaluated = eval_input(test_input);
-        assert_boolean_object(evaluated, expected)
+        assert_boolean_object(evaluated, expected, test_input)
     }
 }
 
@@ -80,7 +80,7 @@ fn test_bang_operator() {
         let test_input = test_case.0;
         let expected = test_case.1;
         let evaluated = eval_input(test_input);
-        assert_boolean_object(evaluated, expected)
+        assert_boolean_object(evaluated, expected, test_input)
     }
 }
 
@@ -101,9 +101,31 @@ fn test_if_else_expressions() {
         let expected = test_case.1;
         let evaluated = eval_input(test_input);
         match expected {
-            Some(expected_int) => { assert_integer_object(evaluated, expected_int) }
+            Some(expected_int) => { assert_integer_object(evaluated, expected_int, test_input) }
             None => { assert_null_object(evaluated) }
         }
+    }
+}
+
+#[test]
+fn test_return_statements() {
+    let test_cases = vec![
+        ("return 10;", 10),
+        ("return 10; 9;", 10),
+        ("return 2 * 5; 9;", 10),
+        ("9; return 2 * 5; 9;", 10),
+        ("if (10 > 1) {
+              if (10 > 1) {
+              return 10;
+         }
+         return 1;", 10)
+    ];
+
+    for test_case in test_cases {
+        let test_input = test_case.0;
+        let expected = test_case.1 as i64;
+        let evaluated = eval_input(test_input);
+        assert_integer_object(evaluated, expected, test_input)
     }
 }
 
@@ -111,17 +133,17 @@ fn assert_null_object(object: Object) {
     assert!(matches!(object, Object::Null), "Expected Null object, x Got: {:?}", object);
 }
 
-fn assert_boolean_object(object: Object, expected: bool) {
+fn assert_boolean_object(object: Object, expected: bool, test_input: &str) {
     if let Object::Boolean(value) = object {
-        assert_eq!(value, expected);
+        assert_eq!(value, expected, "Test input: {}", test_input);
     } else {
         panic!("Object not Boolean. Got={:?}", object);
     }
 }
 
-fn assert_integer_object(object: Object, expected: i64) {
+fn assert_integer_object(object: Object, expected: i64, test_input: &str) {
     if let Object::Integer(value) = object {
-        assert_eq!(value, expected);
+        assert_eq!(value, expected, "Test input: {}", test_input);
     } else {
         panic!("Object not Integer. Got={:?}", object);
     }
