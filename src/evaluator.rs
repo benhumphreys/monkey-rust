@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 
-use crate::ast::{BlockStatement, Expression, Program, Statement};
+use crate::ast::{BlockStatement, Expression, Identifier, Program, Statement};
 use crate::environment::Environment;
 use crate::object::{Object, ObjectType};
 
@@ -12,7 +12,7 @@ pub fn eval_program(program: &Program, env: &mut Environment) -> Object {
     let mut result = OBJECT_NULL;
 
     for stmt in &program.statements {
-        result = eval_statement(&stmt, env);
+        result = eval_statement(stmt, env);
         if let Object::ReturnValue(value) = result {
             return *value;
         }
@@ -91,9 +91,63 @@ fn eval_expression(expr: &Expression, env: &mut Environment) -> Object {
         Expression::IfExpression(_, condition, consequence, alternative) => {
             eval_if_expression(condition, consequence, alternative, env)
         }
-        Expression::FunctionLiteral(_, _, _) => {todo!()}
-        Expression::CallExpression(_, _, _) => {todo!()}
+        Expression::FunctionLiteral(_, params, body) => {
+            Object::Function(params.clone(), body.clone(), env.clone())
+        }
+        Expression::CallExpression(_, boxed_fn, arguments) => {
+            let evaluated_function = eval_expression(boxed_fn.as_ref(), env);
+            if is_error(&evaluated_function) {
+                return evaluated_function;
+            }
+
+            let evaluated_args = eval_expressions(arguments, env);
+            if evaluated_args.len() == 1 && is_error(evaluated_args.first().unwrap()) {
+                return evaluated_args.first().unwrap().clone();
+            }
+
+            apply_function(evaluated_function, evaluated_args)
+        }
     }
+}
+
+fn apply_function(function: Object, args: Vec<Object>) -> Object {
+    if let Object::Function(parameters, body, env) = function.clone() {
+        let mut extended_env = extend_function_env(parameters, &env, args);
+        let evaluated = eval_block_statement(body, &mut extended_env);
+        unwrap_return_value(evaluated)
+    } else {
+        Object::Error(format!("not a function: {}", function.object_type()))
+    }
+}
+
+fn unwrap_return_value(obj: Object) -> Object {
+    if let Object::ReturnValue(value) = obj {
+        *value
+    } else {
+        obj
+    }
+}
+
+fn extend_function_env(fn_parameters: Vec<Identifier>, fn_env: &Environment, args: Vec<Object>) -> Environment {
+    let mut env = Environment::new_enclosed_environment(fn_env);
+
+    for n in 0..fn_parameters.len() {
+        env.set(fn_parameters[n].value.clone(), args[n].clone());
+    }
+    env
+}
+
+fn eval_expressions(expressions: &Vec<Expression>, env: &mut Environment) -> Vec<Object> {
+    let mut result = Vec::new();
+
+    for expr in expressions {
+        let evaluated = eval_expression(expr, env);
+        if let Object::Error(_) = evaluated {
+            return result
+        }
+        result.push(evaluated);
+    }
+    result
 }
 
 fn eval_identifier(ident: &str, env: &mut Environment) -> Object {

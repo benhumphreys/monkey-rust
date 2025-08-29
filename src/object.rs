@@ -1,12 +1,15 @@
 #![allow(dead_code)]
 
 use std::fmt::{Display, Formatter};
+use crate::ast::{BlockStatement, Identifier};
+use crate::environment::Environment;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Object {
     Integer(i64),
     Boolean(bool),
     ReturnValue(Box<Object>),
+    Function(Vec<Identifier>, BlockStatement, Environment),
     Error(String),
     Null,
 }
@@ -21,6 +24,15 @@ impl Display for Object {
             Object::Integer(value) => write!(f, "{}", value),
             Object::Boolean(value) => write!(f, "{}", value),
             Object::ReturnValue(boxed_value) => write!(f, "{}", *boxed_value),
+            Object::Function(parameters, body, _) => {
+                write!(f, "fn ({}) {{\n{}\n}}",
+                       parameters
+                           .iter()
+                           .map(|id| id.to_string())
+                           .collect::<Vec<String>>()
+                           .join(", "),
+                       body)
+            }
             Object::Error(value) => write!(f, "error: {}", value),
             Object::Null =>  write!(f, "Null"),
         }
@@ -33,8 +45,9 @@ impl ObjectType for Object {
             Object::Integer(_) => "INTEGER",
             Object::Boolean(_) => "BOOLEAN",
             Object::ReturnValue(_) => "RETURN_VALUE",
+            Object::Function(_, _, _) => "FUNCTION",
             Object::Error(_) => "ERROR",
-            Object::Null => "NULL"
+            Object::Null => "NULL",
         }.to_string()
     }
 }

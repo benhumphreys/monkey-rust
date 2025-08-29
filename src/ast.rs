@@ -5,7 +5,7 @@ pub trait Node {
     fn token_literal(&self) -> String;
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Expression {
     Identifier(Token, String),
     IntegerLiteral(Token, i64),
@@ -74,7 +74,7 @@ impl Display for Expression {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Identifier {
     pub token: Token,
     pub value: String,
@@ -205,7 +205,7 @@ impl Node for ReturnStatement {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Statement {
     LetStatement(Token, Identifier, Expression),
     ReturnStatement(Token, Expression),
@@ -236,7 +236,7 @@ impl Node for Statement {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct BlockStatement {
     pub token: Token,
     pub statements: Vec<Statement>

@@ -175,6 +175,54 @@ fn test_let_statements() {
     }
 }
 
+#[test]
+fn test_function_object() {
+    let test_input = "fn(x) { x + 2; };";
+
+    let object = eval_input(test_input);
+
+    if let Object::Function(parameters, body, _) = object {
+        assert_eq!(parameters.len(), 1);
+        assert_eq!(parameters.get(0).unwrap().value, "x");
+        assert_eq!(body.to_string(), "(x + 2)");
+    } else {
+        panic!("Object not Function. Got={:?}", object);
+    }
+}
+
+#[test]
+fn test_function_application() {
+    let test_cases = vec![
+        ("let identity = fn(x) { x; }; identity(5);", 5),
+        ("let identity = fn(x) { return x; }; identity(5);", 5),
+        ("let double = fn(x) { x * 2; }; double(5);", 10),
+        ("let add = fn(x, y) { x + y; }; add(5, 5);", 10),
+        ("let add = fn(x, y) { x + y; }; add(5 + 5, add(5, 5));", 20),
+        ("fn(x) { x; }(5)", 5)
+    ];
+
+    for test_case in test_cases {
+        let test_input = test_case.0;
+        let expected = test_case.1;
+        let evaluated = eval_input(test_input);
+        assert_integer_object(evaluated, expected, test_input);
+    }
+}
+
+#[test]
+fn test_closures() {
+    let test_input =
+        "let newAdder = fn(x) {
+            fn(y) { x + y };
+        };
+
+        let addTwo = newAdder(2);
+        addTwo(2);";
+
+    let evaluated = eval_input(test_input);
+    assert_integer_object(evaluated, 4, test_input);
+}
+
 fn assert_error_object(object: Object, expected_message: &str, test_input: &str) {
     if let Object::Error(value) = object {
         assert_eq!(value, expected_message, "Test input: {}", test_input);
