@@ -2,6 +2,7 @@
 
 use std::io;
 use std::io::{BufRead, Write};
+use monkey::environment::Environment;
 use monkey::evaluator::eval_program;
 use monkey::lexer::Lexer;
 use monkey::parser::{ParseError, Parser};
@@ -11,6 +12,7 @@ fn main() {
     let mut lines = stdin.lock().lines();
 
     println!("Monkey programming language");
+    let mut env = Environment::new();
     loop {
         print!(">> ");
         io::stdout().flush().unwrap();
@@ -24,7 +26,7 @@ fn main() {
                 print_parser_errors(&parser.errors());
                 continue;
             }
-            let evaluated = eval_program(&program);
+            let evaluated = eval_program(&program, &mut env);
             println!("{}", evaluated);
         } else {
             break;

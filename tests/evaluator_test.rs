@@ -1,5 +1,6 @@
 #![allow(dead_code)]
 
+use monkey::environment::Environment;
 use monkey::evaluator::eval_program;
 use monkey::lexer::Lexer;
 use monkey::object::Object;
@@ -145,7 +146,8 @@ fn test_error_handling() {
 
                           return 1;
                         }",
-         "unknown operator: BOOLEAN + BOOLEAN")
+         "unknown operator: BOOLEAN + BOOLEAN"),
+        ("foobar", "identifier not found: foobar")
     ];
 
     for test_case in test_cases {
@@ -153,6 +155,23 @@ fn test_error_handling() {
         let expected = test_case.1;
         let evaluated = eval_input(test_input);
         assert_error_object(evaluated, expected, test_input);
+    }
+}
+
+#[test]
+fn test_let_statements() {
+    let test_cases = vec![
+        ("let a = 5; a;", 5),
+        ("let a = 5 * 5; a;", 25),
+        ("let a = 5; let b = a; b;", 5),
+        ("let a = 5; let b = a; let c = a + b + 5; c;", 15)
+    ];
+
+    for test_case in test_cases {
+        let test_input = test_case.0;
+        let expected = test_case.1;
+        let evaluated = eval_input(test_input);
+        assert_integer_object(evaluated, expected, test_input);
     }
 }
 
@@ -188,5 +207,6 @@ fn eval_input(input: &str) -> Object {
     let mut lexer = Lexer::new(input.to_string());
     let mut parser = Parser::new(&mut lexer);
     let program = parser.parse_program();
-    eval_program(&program)
+    let mut env = Environment::new();
+    eval_program(&program, &mut env)
 }
