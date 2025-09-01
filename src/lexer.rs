@@ -59,13 +59,14 @@ impl Lexer {
             '{' => Token::new(TokenType::LeftBrace, self.ch.to_string().as_str()),
             '}' => Token::new(TokenType::RightBrace, self.ch.to_string().as_str()),
             ';' => Token::new(TokenType::SemiColon, self.ch.to_string().as_str()),
+            '\"' => Token::new(TokenType::StringLiteral, self.read_string().as_str()),
             '\0' => Token::new(TokenType::EOF, self.ch.to_string().as_str()),
             _ => {
                 return if is_letter(self.ch) {
                     let ident = self.read_identifier();
                     Token::new(lookup_ident(ident.as_str()), ident.as_str())
                 } else if is_digit(self.ch) {
-                    Token::new(TokenType::Int, self.read_number().as_str())
+                    Token::new(TokenType::IntLiteral, self.read_number().as_str())
                 } else {
                     Token::new(TokenType::Illegal, self.ch.to_string().as_str())
                 }
@@ -108,6 +109,18 @@ impl Lexer {
         while is_letter(self.ch) {
             self.read_char();
         }
+        String::from(&self.input[start..self.position])
+    }
+
+    fn read_string(&mut self) -> String {
+        let start: usize = self.position + 1;
+        loop {
+            self.read_char();
+            if self.ch == '"' || self.ch == '\0' {
+                break;
+            }
+        }
+
         String::from(&self.input[start..self.position])
     }
 

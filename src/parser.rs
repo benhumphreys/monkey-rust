@@ -57,7 +57,8 @@ impl Parser {
 
         // Register parsing functions
         p.register_prefix(Ident, Parser::parse_identifier);
-        p.register_prefix(Int, Parser::parse_integer_literal);
+        p.register_prefix(IntLiteral, Parser::parse_integer_literal);
+        p.register_prefix(StringLiteral, Parser::parse_string_literal);
         p.register_prefix(Bang, Parser::parse_prefix_expression);
         p.register_prefix(Minus, Parser::parse_prefix_expression);
         p.register_prefix(True, Parser::parse_boolean_expression);
@@ -140,6 +141,10 @@ impl Parser {
             Ok(v) => Ok(Expression::IntegerLiteral(token, v)),
             Err(_) => Err(format!("could not parse '{}' as integer", token.literal)),
         }
+    }
+
+    fn parse_string_literal(&mut self) -> Result<Expression, ParseError> {
+        Ok(Expression::StringLiteral(self.cur_token.clone(), self.cur_token.literal.clone()))
     }
 
     fn parse_statement(&mut self) -> Result<Statement, ParseError> {

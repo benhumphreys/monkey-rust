@@ -348,6 +348,18 @@ fn test_call_expression_parsing() {
     }
 }
 
+#[test]
+fn test_string_literal_expression() {
+    let input = "\"hello world\"";
+    let expression = parse_single_expression_program(input);
+
+    if let Expression::StringLiteral(_, value) = expression {
+        assert_eq!(value, "hello world");
+    } else {
+        panic!("Expression not StringLiteral. Got={:?}", expression);
+    }
+}
+
 fn assert_infix_expression(
     exp: &ast::Expression,
     expected_left: Value,

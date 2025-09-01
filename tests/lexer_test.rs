@@ -23,19 +23,21 @@ fn test_next_token() {
           return false;\
         }\n\
         \n\
-        10 == 10;\
-        10 != 9;";
+        10 == 10;\n
+        10 != 9;\n
+        \"foobar\"\n
+        \"foo bar\"";
 
     let expected_tokens = vec![
         (TokenType::Let, "let"),
         (TokenType::Ident, "five"),
         (TokenType::Assign, "="),
-        (TokenType::Int, "5"),
+        (TokenType::IntLiteral, "5"),
         (TokenType::SemiColon, ";"),
         (TokenType::Let, "let"),
         (TokenType::Ident, "ten"),
         (TokenType::Assign, "="),
-        (TokenType::Int, "10"),
+        (TokenType::IntLiteral, "10"),
         (TokenType::SemiColon, ";"),
         (TokenType::Let, "let"),
         (TokenType::Ident, "add"),
@@ -66,19 +68,19 @@ fn test_next_token() {
         (TokenType::Bang, "!"),
         (TokenType::Minus, "-"),
         (TokenType::Asterisk, "*"),
-        (TokenType::Int, "5"),
+        (TokenType::IntLiteral, "5"),
         (TokenType::SemiColon, ";"),
-        (TokenType::Int, "5"),
+        (TokenType::IntLiteral, "5"),
         (TokenType::LessThan, "<"),
-        (TokenType::Int, "10"),
+        (TokenType::IntLiteral, "10"),
         (TokenType::GreaterThan, ">"),
-        (TokenType::Int, "5"),
+        (TokenType::IntLiteral, "5"),
         (TokenType::SemiColon, ";"),
         (TokenType::If, "if"),
         (TokenType::LeftParen, "("),
-        (TokenType::Int, "5"),
+        (TokenType::IntLiteral, "5"),
         (TokenType::LessThan, "<"),
-        (TokenType::Int, "10"),
+        (TokenType::IntLiteral, "10"),
         (TokenType::RightParen, ")"),
         (TokenType::LeftBrace, "{"),
         (TokenType::Return, "return"),
@@ -91,14 +93,16 @@ fn test_next_token() {
         (TokenType::False, "false"),
         (TokenType::SemiColon, ";"),
         (TokenType::RightBrace, "}"),
-        (TokenType::Int, "10"),
+        (TokenType::IntLiteral, "10"),
         (TokenType::Eq, "=="),
-        (TokenType::Int, "10"),
+        (TokenType::IntLiteral, "10"),
         (TokenType::SemiColon, ";"),
-        (TokenType::Int, "10"),
+        (TokenType::IntLiteral, "10"),
         (TokenType::NotEq, "!="),
-        (TokenType::Int, "9"),
+        (TokenType::IntLiteral, "9"),
         (TokenType::SemiColon, ";"),
+        (TokenType::StringLiteral, "foobar"),
+        (TokenType::StringLiteral, "foo bar"),
         (TokenType::EOF, "\0"),
     ];
 

@@ -30,7 +30,8 @@ pub enum TokenType {
 
     // Identifiers and literals
     Ident,
-    Int,
+    IntLiteral,
+    StringLiteral,
 
     // Operators
     Assign,

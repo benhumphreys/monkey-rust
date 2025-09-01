@@ -147,7 +147,8 @@ fn test_error_handling() {
                           return 1;
                         }",
          "unknown operator: BOOLEAN + BOOLEAN"),
-        ("foobar", "identifier not found: foobar")
+        ("foobar", "identifier not found: foobar"),
+        (r#""hello" - "world""#, "unknown operator: STRING - STRING"),
     ];
 
     for test_case in test_cases {
@@ -221,6 +222,32 @@ fn test_closures() {
 
     let evaluated = eval_input(test_input);
     assert_integer_object(evaluated, 4, test_input);
+}
+
+#[test]
+fn test_string_literal() {
+    let test_input = r#""Hello World!""#;
+
+    let evaluated = eval_input(test_input);
+
+    if let Object::StringObject(value) = evaluated {
+        assert_eq!(value, "Hello World!");
+    } else {
+        panic!("Object not StringObject. Got={:?}", evaluated);
+    }
+}
+
+#[test]
+fn test_string_concatenation() {
+    let test_input = r#""Hello" + " " + "World!""#;
+
+    let evaluated = eval_input(test_input);
+
+    if let Object::StringObject(value) = evaluated {
+        assert_eq!(value, "Hello World!");
+    } else {
+        panic!("Object not StringObject. Got={:?}", evaluated);
+    }
 }
 
 fn assert_error_object(object: Object, expected_message: &str, test_input: &str) {

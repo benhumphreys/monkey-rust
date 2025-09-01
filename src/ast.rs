@@ -9,6 +9,7 @@ pub trait Node {
 pub enum Expression {
     Identifier(Token, String),
     IntegerLiteral(Token, i64),
+    StringLiteral(Token, String),
     Boolean(Token, bool),
     PrefixExpression(Token, String, Box<Expression>),
     InfixExpression(Token, Box<Expression>, String, Box<Expression>),
@@ -22,6 +23,7 @@ impl Node for Expression {
         match self {
             Expression::Identifier(token, _) => { token.literal.clone() }
             Expression::IntegerLiteral(token, _) => { token.literal.clone() }
+            Expression::StringLiteral(token, _) => { token.literal.clone() }
             Expression::Boolean(token, _) => {token.literal.clone() }
             Expression::PrefixExpression(token, _, _) => { token.literal.clone() }
             Expression::InfixExpression(token, _, _, _) => { token.literal.clone() }
@@ -37,6 +39,7 @@ impl Display for Expression {
         match self {
             Expression::Identifier(_, value) => write!(f, "{}", value),
             Expression::IntegerLiteral(_, value) => write!(f, "{}", value),
+            Expression::StringLiteral(_, value) => write!(f, "{}", value),
             Expression::Boolean(_, value) => write!(f, "{}", value),
             Expression::PrefixExpression(_, operator, right) => {
                 write!(f, "({}{})", operator, right)

@@ -68,6 +68,7 @@ fn eval_expression(expr: &Expression, env: &mut Environment) -> Object {
     match expr {
         Expression::Identifier(_, value) => eval_identifier(value, env),
         Expression::IntegerLiteral(_, value) => Object::Integer(*value),
+        Expression::StringLiteral(_, value) => Object::StringObject(value.clone()),
         Expression::Boolean(_, value) => { if *value { OBJECT_BOOLEAN_TRUE } else { OBJECT_BOOLEAN_FALSE } }
         Expression::PrefixExpression(_, operator, right) => {
             let evaluated_right = eval_expression(right, env);
@@ -86,7 +87,7 @@ fn eval_expression(expr: &Expression, env: &mut Environment) -> Object {
             if is_error(&evaluated_right) {
                 return evaluated_right;
             }
-            eval_infix_expression(operator, evaluated_left, evaluated_right)
+            eval_infix_expression(operator, &evaluated_left, &evaluated_right)
         }
         Expression::IfExpression(_, condition, consequence, alternative) => {
             eval_if_expression(condition, consequence, alternative, env)
@@ -172,21 +173,34 @@ fn eval_if_expression(condition: &Expression, consequence: &BlockStatement, alte
     }
 }
 
-fn eval_infix_expression(operator: &str, left: Object, right: Object) -> Object {
-    let maybe_int_left = object_to_int(&left);
-    let maybe_int_right = object_to_int(&right);
+fn eval_infix_expression(operator: &str, left: &Object, right: &Object) -> Object {
+    match (left, right) {
+        (Object::Integer(l), Object::Integer(r)) => {
+            eval_integer_infix_expression(operator, *l, *r)
+        },
+        (Object::StringObject(l), Object::StringObject(r)) => {
+            eval_string_infix_expression(operator, l, r)
+        },
+        (_, _) => {
+            if operator == "==" {
+                Object::Boolean(left == right)
+            } else if operator == "!=" {
+                Object::Boolean(left != right)
+            } else if left.object_type() != right.object_type() {
+                Object::Error(format!("type mismatch: {} {} {}", left.object_type(), operator, right.object_type()))
+            } else {
+                Object::Error(format!("unknown operator: {} {} {}", left.object_type(), operator, right.object_type()))
+            }
 
-    if maybe_int_left.is_some() && maybe_int_right.is_some() {
-        eval_integer_infix_expression(operator, maybe_int_left.unwrap(), maybe_int_right.unwrap())
-    } else if operator == "==" {
-        Object::Boolean(left == right)
-    } else if operator == "!=" {
-        Object::Boolean(left != right)
-    } else if left.object_type() != right.object_type() {
-        Object::Error(format!("type mismatch: {} {} {}", left.object_type(), operator, right.object_type()))
-    } else {
-        Object::Error(format!("unknown operator: {} {} {}", left.object_type(), operator, right.object_type()))
+        }
     }
+}
+
+fn eval_string_infix_expression(operator: &str, left: &str, right: &str) -> Object {
+    if operator != "+" {
+        return Object::Error(format!("unknown operator: STRING {} STRING", operator))
+    }
+    Object::StringObject(left.to_string() + right)
 }
 
 fn eval_integer_infix_expression(operator: &str, left: i64, right: i64) -> Object {
