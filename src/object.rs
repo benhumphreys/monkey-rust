@@ -1,8 +1,11 @@
 #![allow(dead_code)]
+#![allow(unpredictable_function_pointer_comparisons)]
 
 use std::fmt::{Display, Formatter};
 use crate::ast::{BlockStatement, Identifier};
 use crate::environment::Environment;
+
+pub type BuiltinFunction = fn(Vec<Object>) -> Object;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Object {
@@ -11,6 +14,7 @@ pub enum Object {
     StringObject(String),
     ReturnValue(Box<Object>),
     Function(Vec<Identifier>, BlockStatement, Environment),
+    Builtin(BuiltinFunction),
     Error(String),
     Null,
 }
@@ -35,6 +39,7 @@ impl Display for Object {
                            .join(", "),
                        body)
             }
+            Object::Builtin(_) => {write!(f, "builtin function")},
             Object::Error(value) => write!(f, "error: {}", value),
             Object::Null =>  write!(f, "Null"),
         }
@@ -46,9 +51,10 @@ impl ObjectType for Object {
         match self {
             Object::Integer(_) => "INTEGER",
             Object::Boolean(_) => "BOOLEAN",
-            Object::StringObject(_) => {"STRING"}
+            Object::StringObject(_) => "STRING",
             Object::ReturnValue(_) => "RETURN_VALUE",
             Object::Function(_, _, _) => "FUNCTION",
+            Object::Builtin(_) => "BUILTIN",
             Object::Error(_) => "ERROR",
             Object::Null => "NULL",
         }.to_string()

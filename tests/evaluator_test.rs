@@ -250,6 +250,37 @@ fn test_string_concatenation() {
     }
 }
 
+#[test]
+fn test_builtin_functions() {
+    let test_cases = vec![
+        ("len(\"\")", 0),
+        ("len(\"four\")", 4),
+        ("len(\"hello world\")", 11),
+    ];
+
+    for test_case in test_cases {
+        let test_input = test_case.0;
+        let expected = test_case.1;
+        let evaluated = eval_input(test_input);
+        assert_integer_object(evaluated, expected, test_input);
+    }
+}
+
+#[test]
+fn test_builtin_function_errors() {
+    let test_cases = vec![
+        ("len(1)", "argument to `len` not supported, got INTEGER"),
+        ("len(\"one\", \"two\")", "wrong number of arguments. got=2, want=1"),
+    ];
+
+    for test_case in test_cases {
+        let test_input = test_case.0;
+        let expected = test_case.1;
+        let evaluated = eval_input(test_input);
+        assert_error_object(evaluated, expected, test_input);
+    }
+}
+
 fn assert_error_object(object: Object, expected_message: &str, test_input: &str) {
     if let Object::Error(value) = object {
         assert_eq!(value, expected_message, "Test input: {}", test_input);

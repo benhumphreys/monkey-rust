@@ -1,9 +1,13 @@
 #![allow(dead_code)]
 
+use std::collections::HashMap;
+use std::sync::LazyLock;
 use crate::ast::{BlockStatement, Expression, Identifier, Program, Statement};
+use crate::builtins::builtins;
 use crate::environment::Environment;
 use crate::object::{Object, ObjectType};
 
+const BUILTINS: LazyLock<HashMap<String, Object>> = LazyLock::new(builtins);
 const OBJECT_BOOLEAN_TRUE: Object = Object::Boolean(true);
 const OBJECT_BOOLEAN_FALSE: Object = Object::Boolean(false);
 const OBJECT_NULL: Object = Object::Null;
@@ -116,6 +120,8 @@ fn apply_function(function: Object, args: Vec<Object>) -> Object {
         let mut extended_env = extend_function_env(parameters, &env, args);
         let evaluated = eval_block_statement(body, &mut extended_env);
         unwrap_return_value(evaluated)
+    } else if let Object::Builtin(function) = function.clone() {
+        function(args)
     } else {
         Object::Error(format!("not a function: {}", function.object_type()))
     }
@@ -154,7 +160,12 @@ fn eval_expressions(expressions: &Vec<Expression>, env: &mut Environment) -> Vec
 fn eval_identifier(ident: &str, env: &mut Environment) -> Object {
     match env.get(ident) {
         Some(value) => value,
-        None => Object::Error(format!("identifier not found: {}", ident))
+        None => {
+            if BUILTINS.contains_key(ident) {
+                return BUILTINS[ident].clone();
+            }
+            Object::Error(format!("identifier not found: {}", ident))
+        }
     }
 }
 
