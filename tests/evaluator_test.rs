@@ -253,31 +253,23 @@ fn test_string_concatenation() {
 #[test]
 fn test_builtin_functions() {
     let test_cases = vec![
-        ("len(\"\")", 0),
-        ("len(\"four\")", 4),
-        ("len(\"hello world\")", 11),
+        ("len(\"\")", ExpectedValue::Integer(0)),
+        ("len(\"four\")", ExpectedValue::Integer(4)),
+        ("len(\"hello world\")", ExpectedValue::Integer(11)),
+        ("len(1)", ExpectedValue::Error("argument to `len` not supported, got INTEGER".to_string())),
+        ("len(\"one\", \"two\")", ExpectedValue::Error("wrong number of arguments. got=2, want=1".to_string()))
     ];
 
     for test_case in test_cases {
         let test_input = test_case.0;
         let expected = test_case.1;
         let evaluated = eval_input(test_input);
-        assert_integer_object(evaluated, expected, test_input);
-    }
-}
 
-#[test]
-fn test_builtin_function_errors() {
-    let test_cases = vec![
-        ("len(1)", "argument to `len` not supported, got INTEGER"),
-        ("len(\"one\", \"two\")", "wrong number of arguments. got=2, want=1"),
-    ];
-
-    for test_case in test_cases {
-        let test_input = test_case.0;
-        let expected = test_case.1;
-        let evaluated = eval_input(test_input);
-        assert_error_object(evaluated, expected, test_input);
+        match expected {
+            ExpectedValue::Integer(expected_value) => assert_integer_object(evaluated, expected_value, test_input),
+            ExpectedValue::Error(expected_error) => assert_error_object(evaluated, expected_error.as_str(), test_input),
+            ExpectedValue::Null => { assert_null_object(evaluated) }
+        }
     }
 }
 
@@ -300,35 +292,27 @@ fn test_array_literal() {
 #[test]
 fn test_array_index_expressions() {
     let test_cases = vec![
-        ("[1, 2, 3][0]", 1),
-        ("[1, 2, 3][1]", 2),
-        ("[1, 2, 3][2]", 3),
-        ("let i = 0; [1][i];", 1),
-        ("[1, 2, 3][1 + 1];", 3),
-        ("let myArray = [1, 2, 3]; myArray[2];", 3),
-        ("let myArray = [1, 2, 3]; myArray[0] + myArray[1] + myArray[2];", 6),
-        ("let myArray = [1, 2, 3]; let i = myArray[0]; myArray[i];", 2),
+        ("[1, 2, 3][0]", ExpectedValue::Integer(1)),
+        ("[1, 2, 3][1]", ExpectedValue::Integer(2)),
+        ("[1, 2, 3][2]", ExpectedValue::Integer(3)),
+        ("let i = 0; [1][i];", ExpectedValue::Integer(1)),
+        ("[1, 2, 3][1 + 1];", ExpectedValue::Integer(3)),
+        ("let myArray = [1, 2, 3]; myArray[2];", ExpectedValue::Integer(3)),
+        ("let myArray = [1, 2, 3]; myArray[0] + myArray[1] + myArray[2];", ExpectedValue::Integer(6)),
+        ("let myArray = [1, 2, 3]; let i = myArray[0]; myArray[i];", ExpectedValue::Integer(2)),
+        ("[1, 2, 3][3]", ExpectedValue::Null),
+        ("[1, 2, 3][-1]", ExpectedValue::Null),
     ];
 
     for test_case in test_cases {
         let test_input = test_case.0;
         let expected = test_case.1;
         let evaluated = eval_input(test_input);
-        assert_integer_object(evaluated, expected, test_input);
-    }
-}
-
-#[test]
-fn test_array_index_expressions_out_of_bounds() {
-    let test_cases = vec![
-        ("[1, 2, 3][3]"),
-        ("[1, 2, 3][-1]"),
-    ];
-
-    for test_case in test_cases {
-        let test_input = test_case;
-        let evaluated = eval_input(test_input);
-        assert_null_object(evaluated);
+        match expected {
+            ExpectedValue::Integer(expected_value) => assert_integer_object(evaluated, expected_value, test_input),
+            ExpectedValue::Error(expected_error) => assert_error_object(evaluated, expected_error.as_str(), test_input),
+            ExpectedValue::Null => { assert_null_object(evaluated) }
+        }
     }
 }
 
@@ -366,4 +350,11 @@ fn eval_input(input: &str) -> Object {
     let program = parser.parse_program();
     let mut env = Environment::new();
     eval_program(&program, &mut env)
+}
+
+#[derive(Debug)]
+enum ExpectedValue {
+    Integer(i64),
+    Error(String),
+    Null,
 }
