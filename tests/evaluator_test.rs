@@ -281,6 +281,57 @@ fn test_builtin_function_errors() {
     }
 }
 
+#[test]
+fn test_array_literal() {
+    let test_input = "[1, 2 * 2, 3 + 3]";
+
+    let evaluated = eval_input(test_input);
+
+    if let Object::Array(elements) = evaluated {
+        assert_eq!(elements.len(), 3);
+        assert_integer_object(elements[0].clone(), 1, test_input);
+        assert_integer_object(elements[1].clone(), 4, test_input);
+        assert_integer_object(elements[2].clone(), 6, test_input);
+    } else {
+        panic!("Object not Array. Got={:?}", evaluated);
+    }
+}
+
+#[test]
+fn test_array_index_expressions() {
+    let test_cases = vec![
+        ("[1, 2, 3][0]", 1),
+        ("[1, 2, 3][1]", 2),
+        ("[1, 2, 3][2]", 3),
+        ("let i = 0; [1][i];", 1),
+        ("[1, 2, 3][1 + 1];", 3),
+        ("let myArray = [1, 2, 3]; myArray[2];", 3),
+        ("let myArray = [1, 2, 3]; myArray[0] + myArray[1] + myArray[2];", 6),
+        ("let myArray = [1, 2, 3]; let i = myArray[0]; myArray[i];", 2),
+    ];
+
+    for test_case in test_cases {
+        let test_input = test_case.0;
+        let expected = test_case.1;
+        let evaluated = eval_input(test_input);
+        assert_integer_object(evaluated, expected, test_input);
+    }
+}
+
+#[test]
+fn test_array_index_expressions_out_of_bounds() {
+    let test_cases = vec![
+        ("[1, 2, 3][3]"),
+        ("[1, 2, 3][-1]"),
+    ];
+
+    for test_case in test_cases {
+        let test_input = test_case;
+        let evaluated = eval_input(test_input);
+        assert_null_object(evaluated);
+    }
+}
+
 fn assert_error_object(object: Object, expected_message: &str, test_input: &str) {
     if let Object::Error(value) = object {
         assert_eq!(value, expected_message, "Test input: {}", test_input);

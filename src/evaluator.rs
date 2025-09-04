@@ -112,8 +112,52 @@ fn eval_expression(expr: &Expression, env: &mut Environment) -> Object {
 
             apply_function(evaluated_function, evaluated_args)
         }
-        Expression::ArrayLiteral(_, _) => { todo!() }
-        Expression::IndexExpression(_, _, _) => { todo!() }
+        Expression::ArrayLiteral(_, elements) => {
+            let evaluated_elements = eval_expressions(elements, env);
+            if evaluated_elements.len() == 1 && is_error(evaluated_elements.first().unwrap()) {
+                return evaluated_elements.first().unwrap().clone();
+            }
+            Object::Array(evaluated_elements)
+        }
+        Expression::IndexExpression(_, left, index) => {
+            let evaluated_left = eval_expression(left, env);
+            if is_error(&evaluated_left) {
+                return evaluated_left;
+            }
+
+            let evaluated_index = eval_expression(index, env);
+            if is_error(&evaluated_index) {
+                return evaluated_index;
+            }
+
+            eval_index_expression(&evaluated_left, &evaluated_index)
+        }
+    }
+}
+
+fn eval_index_expression(left: &Object, index: &Object) -> Object {
+    if left.object_type() == "ARRAY" && index.object_type() == "INTEGER" {
+        eval_array_index_expression(left, index)
+    } else {
+        Object::Error(format!("index operator not supported: {}", left.object_type()))
+    }
+}
+
+fn eval_array_index_expression(array: &Object, index: &Object) -> Object {
+    if let Object::Array(elements) = array {
+        if let Object::Integer(idx) = index {
+            let max = elements.len() as i64 - 1;
+
+            if *idx < 0 || *idx > max {
+                return OBJECT_NULL;
+            }
+
+            elements[*idx as usize].clone()
+        } else {
+            Object::Error(format!("expected array indexing object. Got: {}", index.object_type()))
+        }
+    } else {
+        Object::Error(format!("expected array object. Got: {}", array.object_type()))
     }
 }
 

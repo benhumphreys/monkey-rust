@@ -14,6 +14,7 @@ pub enum Object {
     StringObject(String),
     ReturnValue(Box<Object>),
     Function(Vec<Identifier>, BlockStatement, Environment),
+    Array(Vec<Object>),
     Builtin(BuiltinFunction),
     Error(String),
     Null,
@@ -39,6 +40,14 @@ impl Display for Object {
                            .join(", "),
                        body)
             }
+            Object::Array(elements) => {
+                write!(f, "[{}]",
+                       elements
+                           .iter()
+                           .map(|id| id.to_string())
+                           .collect::<Vec<String>>()
+                           .join(", "))
+            }
             Object::Builtin(_) => {write!(f, "builtin function")},
             Object::Error(value) => write!(f, "error: {}", value),
             Object::Null =>  write!(f, "Null"),
@@ -54,6 +63,7 @@ impl ObjectType for Object {
             Object::StringObject(_) => "STRING",
             Object::ReturnValue(_) => "RETURN_VALUE",
             Object::Function(_, _, _) => "FUNCTION",
+            Object::Array(_) => { "ARRAY" }
             Object::Builtin(_) => "BUILTIN",
             Object::Error(_) => "ERROR",
             Object::Null => "NULL",
