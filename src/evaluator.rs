@@ -112,6 +112,8 @@ fn eval_expression(expr: &Expression, env: &mut Environment) -> Object {
 
             apply_function(evaluated_function, evaluated_args)
         }
+        Expression::ArrayLiteral(_, _) => { todo!() }
+        Expression::IndexExpression(_, _, _) => { todo!() }
     }
 }
 

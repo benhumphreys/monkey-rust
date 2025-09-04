@@ -1,5 +1,6 @@
 use crate::token::Token;
 use std::fmt::{Debug, Display, Formatter};
+use std::ops::Deref;
 
 pub trait Node {
     fn token_literal(&self) -> String;
@@ -16,6 +17,8 @@ pub enum Expression {
     IfExpression(Token, Box<Expression>, BlockStatement, Option<BlockStatement>),
     FunctionLiteral(Token, Vec<Identifier>, BlockStatement),
     CallExpression(Token, Box<Expression>, Vec<Expression>),
+    ArrayLiteral(Token, Vec<Expression>),
+    IndexExpression(Token, Box<Expression>, Box<Expression>),
 }
 
 impl Node for Expression {
@@ -30,6 +33,8 @@ impl Node for Expression {
             Expression::IfExpression(token, _, _, _) => { token.literal.clone() }
             Expression::FunctionLiteral(token, _, _) => { token.literal.clone() }
             Expression::CallExpression(token, _, _) => { token.literal.clone() }
+            Expression::ArrayLiteral(token, _) => { token.literal.clone() }
+            Expression::IndexExpression(token, _, _) => { token.literal.clone() }
         }
     }
 }
@@ -72,6 +77,17 @@ impl Display for Expression {
                            .map(|id| id.to_string())
                            .collect::<Vec<String>>()
                            .join(", "))
+            }
+            Expression::ArrayLiteral(_, elements) => {
+                write!(f, "[{}]",
+                       elements
+                           .iter()
+                           .map(|id| id.to_string())
+                           .collect::<Vec<String>>()
+                           .join(", "))
+            }
+            Expression::IndexExpression(_, left, index) => {
+                write!(f, "({}[{}])", left.deref(), index.deref())           
             }
         }
     }

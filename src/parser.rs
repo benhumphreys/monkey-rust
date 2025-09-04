@@ -21,6 +21,7 @@ enum Precedence {
     Product = 4,     // *
     Prefix = 5,      // -X or !X
     Call = 6,        // myFunction(X)
+    Index = 7,       // array[index]
 }
 
 pub struct Parser {
@@ -52,6 +53,7 @@ impl Parser {
                 (Slash, Precedence::Product),
                 (Asterisk, Precedence::Product),
                 (LeftParen, Precedence::Call),
+                (LeftBracket, Precedence::Index)
             ]),
         };
 
@@ -66,6 +68,7 @@ impl Parser {
         p.register_prefix(LeftParen, Parser::parse_grouped_expression);
         p.register_prefix(If, Parser::parse_if_expression);
         p.register_prefix(Function, Parser::parse_function_literal);
+        p.register_prefix(LeftBracket, Parser::parse_array_literal);
 
         p.register_infix(Plus, Parser::parse_infix_expression);
         p.register_infix(Minus, Parser::parse_infix_expression);
@@ -76,6 +79,7 @@ impl Parser {
         p.register_infix(LessThan, Parser::parse_infix_expression);
         p.register_infix(GreaterThan, Parser::parse_infix_expression);
         p.register_infix(LeftParen, Parser::parse_call_expression);
+        p.register_infix(LeftBracket, Parser::parse_index_expression);
 
         // Populate cur_token and peek_token
         p.next_token();
@@ -376,32 +380,49 @@ impl Parser {
 
     fn parse_call_expression(&mut self, function: Expression) -> Result<Expression, ParseError> {
         let token = self.cur_token.clone();
-        let arguments = self.parse_call_arguments()?;
+        let arguments = self.parse_expression_list(TokenType::RightParen)?;
         Ok(Expression::CallExpression(token, Box::new(function), arguments))
     }
 
-    fn parse_call_arguments(&mut self) -> Result<Vec<Expression>, ParseError> {
-        let mut args = Vec::new();
+    fn parse_index_expression(&mut self, left: Expression) -> Result<Expression, ParseError> {
+        let token = self.cur_token.clone();
 
-        if self.peek_token_is(&RightParen) {
+        self.next_token();
+        let index = self.parse_expression(Lowest)?;
+        if !self.expect_peek(&RightBracket) {
+            return Err(ParseError::default());
+        }
+        Ok(Expression::IndexExpression(token, Box::new(left), Box::new(index)))
+    }
+
+    fn parse_array_literal(&mut self) -> Result<Expression, ParseError> {
+        let token = self.cur_token.clone();
+        let elements = self.parse_expression_list(TokenType::RightBracket)?;
+        Ok(Expression::ArrayLiteral(token, elements))
+    }
+
+    fn parse_expression_list(&mut self, end: TokenType) -> Result<Vec<Expression>, ParseError> {
+        let mut list = Vec::new();
+
+        if self.peek_token_is(&end) {
             self.next_token();
-            return Ok(args);
+            return Ok(list);
         }
 
         self.next_token();
-        args.push(self.parse_expression(Lowest)?.clone());
+        list.push(self.parse_expression(Lowest)?.clone());
 
         while self.peek_token_is(&Comma) {
             self.next_token();
             self.next_token();
-            args.push(self.parse_expression(Lowest)?.clone());
+            list.push(self.parse_expression(Lowest)?.clone());
         }
 
-        if !self.expect_peek(&RightParen) {
-            return Err("Failed to parse function arguments".to_string())
+        if !self.expect_peek(&end) {
+            return Err("Failed to parse list expression".to_string())
         }
 
-        Ok(args)
+        Ok(list)
     }
 
     fn cur_token_is(&self, token_type: &TokenType) -> bool {

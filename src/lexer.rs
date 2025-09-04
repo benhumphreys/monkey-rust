@@ -58,6 +58,8 @@ impl Lexer {
             '>' => Token::new(TokenType::GreaterThan, self.ch.to_string().as_str()),
             '{' => Token::new(TokenType::LeftBrace, self.ch.to_string().as_str()),
             '}' => Token::new(TokenType::RightBrace, self.ch.to_string().as_str()),
+            '[' => Token::new(TokenType::LeftBracket, self.ch.to_string().as_str()),
+            ']' => Token::new(TokenType::RightBracket, self.ch.to_string().as_str()),
             ';' => Token::new(TokenType::SemiColon, self.ch.to_string().as_str()),
             '\"' => Token::new(TokenType::StringLiteral, self.read_string().as_str()),
             '\0' => Token::new(TokenType::EOF, self.ch.to_string().as_str()),

@@ -26,7 +26,8 @@ fn test_next_token() {
         10 == 10;\n
         10 != 9;\n
         \"foobar\"\n
-        \"foo bar\"";
+        \"foo bar\"\n\
+        [1, 2];\n";
 
     let expected_tokens = vec![
         (TokenType::Let, "let"),
@@ -103,6 +104,12 @@ fn test_next_token() {
         (TokenType::SemiColon, ";"),
         (TokenType::StringLiteral, "foobar"),
         (TokenType::StringLiteral, "foo bar"),
+        (TokenType::LeftBracket, "["),
+        (TokenType::IntLiteral, "1"),
+        (TokenType::Comma, ","),
+        (TokenType::IntLiteral, "2"),
+        (TokenType::RightBracket, "]"),
+        (TokenType::SemiColon, ";"),
         (TokenType::EOF, "\0"),
     ];
 

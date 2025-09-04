@@ -179,7 +179,9 @@ fn test_operator_precedence_parsing() {
         ("!(true == true)", "(!(true == true))"),
         ("a + add(b * c) + d", "((a + add((b * c))) + d)"),
         ("add(a, b, 1, 2 * 3, 4 + 5, add(6, 7 * 8))", "add(a, b, 1, (2 * 3), (4 + 5), add(6, (7 * 8)))"),
-        ("add(a + b + c * d / f + g)", "add((((a + b) + ((c * d) / f)) + g))")
+        ("add(a + b + c * d / f + g)", "add((((a + b) + ((c * d) / f)) + g))"),
+        ("a * [1, 2, 3, 4][b * c] * d", "((a * ([1, 2, 3, 4][(b * c)])) * d)"),
+        ("add(a * b[2], b[1], 2 * [1, 2][1])", "add((a * (b[2])), (b[1]), (2 * ([1, 2][1])))")
     ];
 
     for test_case in test_cases {
@@ -357,6 +359,34 @@ fn test_string_literal_expression() {
         assert_eq!(value, "hello world");
     } else {
         panic!("Expression not StringLiteral. Got={:?}", expression);
+    }
+}
+
+#[test]
+fn test_parsing_array_literals() {
+    let input = "[1, 2 * 2, 3 + 3]";
+    let expression = parse_single_expression_program(input);
+
+    if let Expression::ArrayLiteral(_, elements) = expression {
+        assert_eq!(elements.len(), 3);
+        assert_integer_literal(&elements[0], 1);
+        assert_infix_expression(&elements[1], Value::Integer(2), "*", Value::Integer(2));
+        assert_infix_expression(&elements[2], Value::Integer(3), "+", Value::Integer(3));
+    } else {
+        panic!("Expression not ArrayLiteral. Got={:?}", expression);
+    }
+}
+
+#[test]
+fn test_parsing_index_expressions() {
+    let input = "myArray[1 + 1]";
+    let expression = parse_single_expression_program(input);
+
+    if let Expression::IndexExpression(_, left, index) = expression {
+        assert_identifier(left.deref(), "myArray");
+        assert_infix_expression(index.deref(), Value::Integer(1), "+", Value::Integer(1));
+    } else {
+        panic!("Expression not IndexExpression. Got={:?}", expression);
     }
 }
 
