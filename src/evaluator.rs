@@ -5,12 +5,9 @@ use std::sync::LazyLock;
 use crate::ast::{BlockStatement, Expression, Identifier, Program, Statement};
 use crate::builtins::builtins;
 use crate::environment::Environment;
-use crate::object::{Object, ObjectType};
+use crate::object::{Object, ObjectType, OBJECT_BOOLEAN_FALSE, OBJECT_BOOLEAN_TRUE, OBJECT_NULL};
 
 const BUILTINS: LazyLock<HashMap<String, Object>> = LazyLock::new(builtins);
-const OBJECT_BOOLEAN_TRUE: Object = Object::Boolean(true);
-const OBJECT_BOOLEAN_FALSE: Object = Object::Boolean(false);
-const OBJECT_NULL: Object = Object::Null;
 
 pub fn eval_program(program: &Program, env: &mut Environment) -> Object {
     let mut result = OBJECT_NULL;

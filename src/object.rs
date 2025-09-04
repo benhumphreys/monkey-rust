@@ -7,6 +7,10 @@ use crate::environment::Environment;
 
 pub type BuiltinFunction = fn(Vec<Object>) -> Object;
 
+pub const OBJECT_BOOLEAN_TRUE: Object = Object::Boolean(true);
+pub const OBJECT_BOOLEAN_FALSE: Object = Object::Boolean(false);
+pub const OBJECT_NULL: Object = Object::Null;
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum Object {
     Integer(i64),

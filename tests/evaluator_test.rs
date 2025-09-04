@@ -257,7 +257,19 @@ fn test_builtin_functions() {
         ("len(\"four\")", ExpectedValue::Integer(4)),
         ("len(\"hello world\")", ExpectedValue::Integer(11)),
         ("len(1)", ExpectedValue::Error("argument to `len` not supported, got INTEGER".to_string())),
-        ("len(\"one\", \"two\")", ExpectedValue::Error("wrong number of arguments. got=2, want=1".to_string()))
+        ("len(\"one\", \"two\")", ExpectedValue::Error("wrong number of arguments. got=2, want=1".to_string())),
+        ("len([1, 2, 3])", ExpectedValue::Integer(3)),
+        ("len([])", ExpectedValue::Integer(0)),
+        ("first([1, 2, 3])", ExpectedValue::Integer(1)),
+        ("first([])", ExpectedValue::Null),
+        ("first(1)", ExpectedValue::Error("argument to 'first' must be ARRAY, got INTEGER".to_string())),
+        ("last([1, 2, 3])", ExpectedValue::Integer(3)),
+        ("last([])", ExpectedValue::Null),
+        ("last(1)", ExpectedValue::Error("argument to 'last' must be ARRAY, got INTEGER".to_string())),
+        ("rest([1, 2, 3])", ExpectedValue::IntegerList(vec![2, 3])),
+        ("rest([])", ExpectedValue::Null),
+        ("push([], 1)", ExpectedValue::IntegerList(vec![1])),
+        ("push(1, 1)", ExpectedValue::Error("argument to 'push' must be ARRAY, got INTEGER".to_string())),
     ];
 
     for test_case in test_cases {
@@ -267,6 +279,16 @@ fn test_builtin_functions() {
 
         match expected {
             ExpectedValue::Integer(expected_value) => assert_integer_object(evaluated, expected_value, test_input),
+            ExpectedValue::IntegerList(expected_elements) => {
+                if let Object::Array(elements) = evaluated {
+                    assert_eq!(elements.len(), expected_elements.len());
+                    for (i, element) in elements.iter().enumerate() {
+                        assert_integer_object(element.clone(), expected_elements[i], test_input);
+                    }
+                } else {
+                    panic!("Object not Array. Got={:?}", evaluated);
+                }
+            }
             ExpectedValue::Error(expected_error) => assert_error_object(evaluated, expected_error.as_str(), test_input),
             ExpectedValue::Null => { assert_null_object(evaluated) }
         }
@@ -310,6 +332,7 @@ fn test_array_index_expressions() {
         let evaluated = eval_input(test_input);
         match expected {
             ExpectedValue::Integer(expected_value) => assert_integer_object(evaluated, expected_value, test_input),
+            ExpectedValue::IntegerList(_) => panic!("programmer error: expected type is not value for array indexing tests"),
             ExpectedValue::Error(expected_error) => assert_error_object(evaluated, expected_error.as_str(), test_input),
             ExpectedValue::Null => { assert_null_object(evaluated) }
         }
@@ -355,6 +378,7 @@ fn eval_input(input: &str) -> Object {
 #[derive(Debug)]
 enum ExpectedValue {
     Integer(i64),
+    IntegerList(Vec<i64>),
     Error(String),
     Null,
 }
