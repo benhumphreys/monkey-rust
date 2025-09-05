@@ -17,9 +17,15 @@ cargo build
 
 To exit the REPL press CTRL-D
 
+# Running a stored program
+
+```
+cargo build
+./target/debug/monkey <program.monkey>
+```
+
 # Running tests
 
 ```
 cargo test
 ```
-

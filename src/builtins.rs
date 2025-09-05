@@ -8,6 +8,7 @@ pub fn builtins() -> HashMap<String, Object>  {
         ("last".to_string(), Object::Builtin(last)),
         ("rest".to_string(), Object::Builtin(rest)),
         ("push".to_string(), Object::Builtin(push)),
+        ("puts".to_string(), Object::Builtin(puts)),
     ])
 }
 
@@ -84,4 +85,11 @@ fn push(args: Vec<Object>) -> Object {
     } else {
         Object::Error(format!("argument to 'push' must be ARRAY, got {}", args[0].object_type()))
     }
+}
+
+fn puts(args: Vec<Object>) -> Object {
+    for arg in args {
+        println!("{}", arg);
+    }
+    OBJECT_NULL
 }

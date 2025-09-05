@@ -31,8 +31,7 @@ fn execute(filename: String) {
         return;
     }
     let mut env = Rc::new(RefCell::new(Environment::new()));
-    let evaluated = eval_program(&program, &mut env);
-    println!("{}", evaluated);
+    eval_program(&program, &mut env);
 }
 
 fn repl() {
