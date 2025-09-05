@@ -47,16 +47,16 @@ fn eval_statement(stmt: &Statement, env: &mut Rc<RefCell<Environment>>) -> Objec
         }
         Statement::ExpressionStatement(_, expression) => { eval_expression(expression, env)}
         Statement::BlockStatement(token, statements) => {
-            eval_block_statement(BlockStatement{token: token.clone(), statements: statements.clone()}, env)
+            eval_block_statement(&BlockStatement{token: token.clone(), statements: statements.clone()}, env)
         }
     }
 }
 
-fn eval_block_statement(block_statement: BlockStatement, env: &mut Rc<RefCell<Environment>>) -> Object {
+fn eval_block_statement(block_statement: &BlockStatement, env: &mut Rc<RefCell<Environment>>) -> Object {
     let mut result = OBJECT_NULL;
 
-    for stmt in block_statement.statements {
-        result = eval_statement(&stmt, env);
+    for stmt in &block_statement.statements {
+        result = eval_statement(stmt, env);
         if let Object::ReturnValue(_) = result {
             return result
         }
@@ -78,7 +78,7 @@ fn eval_expression(expr: &Expression, env: &mut Rc<RefCell<Environment>>) -> Obj
             if is_error(&evaluated_right) {
                 return evaluated_right;
             }
-            eval_prefix_expression(operator, evaluated_right)
+            eval_prefix_expression(operator, &evaluated_right)
         }
         Expression::InfixExpression(_, left, operator, right) => {
             let evaluated_left = eval_expression(left, env);
@@ -109,7 +109,7 @@ fn eval_expression(expr: &Expression, env: &mut Rc<RefCell<Environment>>) -> Obj
                 return evaluated_args.first().unwrap().clone();
             }
 
-            apply_function(evaluated_function, evaluated_args)
+            apply_function(&evaluated_function, evaluated_args)
         }
         Expression::ArrayLiteral(_, elements) => {
             let evaluated_elements = eval_expressions(elements, env);
@@ -160,15 +160,19 @@ fn eval_array_index_expression(array: &Object, index: &Object) -> Object {
     }
 }
 
-fn apply_function(function: Object, args: Vec<Object>) -> Object {
-    if let Object::Function(parameters, body, env) = function.clone() {
-        let mut extended_env = extend_function_env(parameters, &env, args);
-        let evaluated = eval_block_statement(body, &mut extended_env);
-        unwrap_return_value(evaluated)
-    } else if let Object::Builtin(function) = function.clone() {
-        function(args)
-    } else {
-        Object::Error(format!("not a function: {}", function.object_type()))
+fn apply_function(function: &Object, args: Vec<Object>) -> Object {
+    match function {
+        Object::Function(parameters, body, env) => {
+            let mut extended_env = extend_function_env(parameters, env, &args);
+            let evaluated = eval_block_statement(body, &mut extended_env);
+            unwrap_return_value(evaluated)
+        }
+        Object::Builtin(function) => {
+            function(args)
+        }
+        _ => {
+            Object::Error(format!("not a function: {}", function.object_type()))
+        }
     }
 }
 
@@ -180,7 +184,7 @@ fn unwrap_return_value(obj: Object) -> Object {
     }
 }
 
-fn extend_function_env(fn_parameters: Vec<Identifier>, fn_env: &Rc<RefCell<Environment>>, args: Vec<Object>) -> Rc<RefCell<Environment>> {
+fn extend_function_env(fn_parameters: &[Identifier], fn_env: &Rc<RefCell<Environment>>, args: &[Object]) -> Rc<RefCell<Environment>> {
     let mut env = Environment::new_enclosed_environment(fn_env);
 
     for n in 0..fn_parameters.len() {
@@ -221,9 +225,9 @@ fn eval_if_expression(condition: &Expression, consequence: &BlockStatement, alte
     }
 
     if is_truthy(&evaluated_condition) {
-        eval_block_statement(consequence.clone(), env)
+        eval_block_statement(consequence, env)
     } else if let Some(alternative_block) = alternative {
-        eval_block_statement(alternative_block.clone(), env)
+        eval_block_statement(alternative_block, env)
     } else {
         OBJECT_NULL
     }
@@ -273,7 +277,7 @@ fn eval_integer_infix_expression(operator: &str, left: i64, right: i64) -> Objec
     }
 }
 
-fn eval_prefix_expression(operator: &str, right: Object) -> Object {
+fn eval_prefix_expression(operator: &str, right: &Object) -> Object {
     match operator {
         "!" => eval_bang_operator_expression(right),
         "-" => eval_minus_prefix_operator_expression(right),
@@ -281,15 +285,15 @@ fn eval_prefix_expression(operator: &str, right: Object) -> Object {
     }
 }
 
-fn eval_bang_operator_expression(right: Object) -> Object {
+fn eval_bang_operator_expression(right: &Object) -> Object {
     match right {
-        Object::Boolean(value) => { if value { OBJECT_BOOLEAN_FALSE } else { OBJECT_BOOLEAN_TRUE } },
+        Object::Boolean(value) => { if *value { OBJECT_BOOLEAN_FALSE } else { OBJECT_BOOLEAN_TRUE } },
         Object::Null => OBJECT_BOOLEAN_TRUE,
         _ => OBJECT_BOOLEAN_FALSE
     }
 }
 
-fn eval_minus_prefix_operator_expression(right: Object) -> Object {
+fn eval_minus_prefix_operator_expression(right: &Object) -> Object {
     if let Object::Integer(value) = right {
         Object::Integer(-value)
     } else {
