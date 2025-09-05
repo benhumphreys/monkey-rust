@@ -1,5 +1,7 @@
 #![allow(dead_code)]
 
+use std::cell::RefCell;
+use std::rc::Rc;
 use monkey::environment::Environment;
 use monkey::evaluator::eval_program;
 use monkey::lexer::Lexer;
@@ -225,6 +227,21 @@ fn test_closures() {
 }
 
 #[test]
+fn test_closures_use_isolated_environment() {
+    let test_input =
+        "let foo = fn(x) {
+            let a = x;
+        };
+
+        let a = 1;
+        foo(2);
+        a";
+
+    let evaluated = eval_input(test_input);
+    assert_integer_object(evaluated, 1, test_input);
+}
+
+#[test]
 fn test_string_literal() {
     let test_input = r#""Hello World!""#;
 
@@ -339,6 +356,21 @@ fn test_array_index_expressions() {
     }
 }
 
+#[test]
+fn test_fibonacci() {
+    let test_input = "let fibonacci = fn(x) {
+        if (x < 2) {
+            return x;
+        } else {
+            return fibonacci(x - 1) + fibonacci(x - 2);
+        }
+    };
+    fibonacci(10);";
+
+    let evaluated = eval_input(test_input);
+    assert_integer_object(evaluated, 55, test_input);
+}
+
 fn assert_error_object(object: Object, expected_message: &str, test_input: &str) {
     if let Object::Error(value) = object {
         assert_eq!(value, expected_message, "Test input: {}", test_input);
@@ -371,7 +403,7 @@ fn eval_input(input: &str) -> Object {
     let mut lexer = Lexer::new(input.to_string());
     let mut parser = Parser::new(&mut lexer);
     let program = parser.parse_program();
-    let mut env = Environment::new();
+    let mut env = Rc::new(RefCell::new(Environment::new()));
     eval_program(&program, &mut env)
 }
 

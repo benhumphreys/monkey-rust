@@ -2,6 +2,8 @@
 
 use std::{env, io};
 use std::io::{BufRead, Read, Write};
+use std::rc::Rc;
+use std::cell::RefCell;
 use monkey::environment::Environment;
 use monkey::evaluator::eval_program;
 use monkey::lexer::Lexer;
@@ -28,7 +30,8 @@ fn execute(filename: String) {
         print_parser_errors(&parser.errors());
         return;
     }
-    let evaluated = eval_program(&program, &mut Environment::new());
+    let mut env = Rc::new(RefCell::new(Environment::new()));
+    let evaluated = eval_program(&program, &mut env);
     println!("{}", evaluated);
 }
 
@@ -37,7 +40,7 @@ fn repl() {
     let mut lines = stdin.lock().lines();
 
     println!("Monkey programming language");
-    let mut env = Environment::new();
+    let mut env = Rc::new(RefCell::new(Environment::new()));
     loop {
         print!(">> ");
         io::stdout().flush().unwrap();

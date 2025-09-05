@@ -2,6 +2,8 @@
 
 use std::collections::HashMap;
 use std::sync::LazyLock;
+use std::rc::Rc;
+use std::cell::RefCell;
 use crate::ast::{BlockStatement, Expression, Identifier, Program, Statement};
 use crate::builtins::builtins;
 use crate::environment::Environment;
@@ -9,7 +11,7 @@ use crate::object::{Object, ObjectType, OBJECT_BOOLEAN_FALSE, OBJECT_BOOLEAN_TRU
 
 const BUILTINS: LazyLock<HashMap<String, Object>> = LazyLock::new(builtins);
 
-pub fn eval_program(program: &Program, env: &mut Environment) -> Object {
+pub fn eval_program(program: &Program, env: &mut Rc<RefCell<Environment>>) -> Object {
     let mut result = OBJECT_NULL;
 
     for stmt in &program.statements {
@@ -25,7 +27,7 @@ pub fn eval_program(program: &Program, env: &mut Environment) -> Object {
     result
 }
 
-fn eval_statement(stmt: &Statement, env: &mut Environment) -> Object {
+fn eval_statement(stmt: &Statement, env: &mut Rc<RefCell<Environment>>) -> Object {
     match stmt {
         Statement::LetStatement(_, ident, expression) => {
             let val = eval_expression(expression, env);
@@ -33,7 +35,7 @@ fn eval_statement(stmt: &Statement, env: &mut Environment) -> Object {
                 return val;
             }
 
-            env.set(ident.value.clone(), val.clone());
+            env.borrow_mut().set(ident.value.clone(), val.clone());
             val
         }
         Statement::ReturnStatement(_, expression) => {
@@ -50,7 +52,7 @@ fn eval_statement(stmt: &Statement, env: &mut Environment) -> Object {
     }
 }
 
-fn eval_block_statement(block_statement: BlockStatement, env: &mut Environment) -> Object {
+fn eval_block_statement(block_statement: BlockStatement, env: &mut Rc<RefCell<Environment>>) -> Object {
     let mut result = OBJECT_NULL;
 
     for stmt in block_statement.statements {
@@ -65,7 +67,7 @@ fn eval_block_statement(block_statement: BlockStatement, env: &mut Environment) 
     result
 }
 
-fn eval_expression(expr: &Expression, env: &mut Environment) -> Object {
+fn eval_expression(expr: &Expression, env: &mut Rc<RefCell<Environment>>) -> Object {
     match expr {
         Expression::Identifier(_, value) => eval_identifier(value, env),
         Expression::IntegerLiteral(_, value) => Object::Integer(*value),
@@ -94,7 +96,7 @@ fn eval_expression(expr: &Expression, env: &mut Environment) -> Object {
             eval_if_expression(condition, consequence, alternative, env)
         }
         Expression::FunctionLiteral(_, params, body) => {
-            Object::Function(params.clone(), body.clone(), env.clone())
+            Object::Function(params.clone(), body.clone(), Rc::clone(env))
         }
         Expression::CallExpression(_, boxed_fn, arguments) => {
             let evaluated_function = eval_expression(boxed_fn.as_ref(), env);
@@ -178,16 +180,16 @@ fn unwrap_return_value(obj: Object) -> Object {
     }
 }
 
-fn extend_function_env(fn_parameters: Vec<Identifier>, fn_env: &Environment, args: Vec<Object>) -> Environment {
+fn extend_function_env(fn_parameters: Vec<Identifier>, fn_env: &Rc<RefCell<Environment>>, args: Vec<Object>) -> Rc<RefCell<Environment>> {
     let mut env = Environment::new_enclosed_environment(fn_env);
 
     for n in 0..fn_parameters.len() {
         env.set(fn_parameters[n].value.clone(), args[n].clone());
     }
-    env
+    Rc::new(RefCell::new(env))
 }
 
-fn eval_expressions(expressions: &Vec<Expression>, env: &mut Environment) -> Vec<Object> {
+fn eval_expressions(expressions: &Vec<Expression>, env: &mut Rc<RefCell<Environment>>) -> Vec<Object> {
     let mut result = Vec::new();
 
     for expr in expressions {
@@ -200,8 +202,8 @@ fn eval_expressions(expressions: &Vec<Expression>, env: &mut Environment) -> Vec
     result
 }
 
-fn eval_identifier(ident: &str, env: &mut Environment) -> Object {
-    match env.get(ident) {
+fn eval_identifier(ident: &str, env: &mut Rc<RefCell<Environment>>) -> Object {
+    match env.borrow().get(ident) {
         Some(value) => value,
         None => {
             if BUILTINS.contains_key(ident) {
@@ -212,7 +214,7 @@ fn eval_identifier(ident: &str, env: &mut Environment) -> Object {
     }
 }
 
-fn eval_if_expression(condition: &Expression, consequence: &BlockStatement, alternative: &Option<BlockStatement>, env: &mut Environment) -> Object {
+fn eval_if_expression(condition: &Expression, consequence: &BlockStatement, alternative: &Option<BlockStatement>, env: &mut Rc<RefCell<Environment>>) -> Object {
     let evaluated_condition = eval_expression(condition, env);
     if is_error(&evaluated_condition) {
         return evaluated_condition;

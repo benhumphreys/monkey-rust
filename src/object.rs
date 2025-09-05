@@ -2,6 +2,8 @@
 #![allow(unpredictable_function_pointer_comparisons)]
 
 use std::fmt::{Display, Formatter};
+use std::rc::Rc;
+use std::cell::RefCell;
 use crate::ast::{BlockStatement, Identifier};
 use crate::environment::Environment;
 
@@ -17,7 +19,7 @@ pub enum Object {
     Boolean(bool),
     StringObject(String),
     ReturnValue(Box<Object>),
-    Function(Vec<Identifier>, BlockStatement, Environment),
+    Function(Vec<Identifier>, BlockStatement, Rc<RefCell<Environment>>),
     Array(Vec<Object>),
     Builtin(BuiltinFunction),
     Error(String),
