@@ -50,6 +50,7 @@ pub enum TokenType {
     // Delimiters
     Comma,
     SemiColon,
+    Colon,
 
     LeftParen,
     RightParen,

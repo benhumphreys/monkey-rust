@@ -7,7 +7,7 @@ use std::cell::RefCell;
 use crate::ast::{BlockStatement, Expression, Identifier, Program, Statement};
 use crate::builtins::builtins;
 use crate::environment::Environment;
-use crate::object::{Object, ObjectType, OBJECT_BOOLEAN_FALSE, OBJECT_BOOLEAN_TRUE, OBJECT_NULL};
+use crate::object::{IsHashable, Object, ObjectType, OBJECT_BOOLEAN_FALSE, OBJECT_BOOLEAN_TRUE, OBJECT_NULL};
 
 const BUILTINS: LazyLock<HashMap<String, Object>> = LazyLock::new(builtins);
 
@@ -131,7 +131,32 @@ fn eval_expression(expr: &Expression, env: &mut Rc<RefCell<Environment>>) -> Obj
 
             eval_index_expression(&evaluated_left, &evaluated_index)
         }
+        Expression::HashLiteral(_, pairs) => { eval_hash_literal(pairs, env) }
     }
+}
+
+fn eval_hash_literal(pairs: &Vec<(Expression, Expression)>, env: &mut Rc<RefCell<Environment>>) -> Object {
+    let mut result = HashMap::new();
+
+    for (key, value) in pairs {
+        let evaluated_key = eval_expression(key, env);
+        if is_error(&evaluated_key) {
+            return evaluated_key;
+        }
+
+        if !evaluated_key.is_hashable() {
+            return Object::Error(format!("unusable as hash key: {}", evaluated_key.object_type()))
+        }
+
+        let evaluated_value = eval_expression(value, env);
+        if is_error(&evaluated_value) {
+            return evaluated_value;
+        }
+
+        result.insert(evaluated_key, evaluated_value);
+    }
+
+    Object::HashObject(result)
 }
 
 fn eval_index_expression(left: &Object, index: &Object) -> Object {

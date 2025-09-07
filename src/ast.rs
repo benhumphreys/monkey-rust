@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use crate::token::Token;
 use std::fmt::{Debug, Display, Formatter};
 use std::ops::Deref;
@@ -19,6 +20,7 @@ pub enum Expression {
     CallExpression(Token, Box<Expression>, Vec<Expression>),
     ArrayLiteral(Token, Vec<Expression>),
     IndexExpression(Token, Box<Expression>, Box<Expression>),
+    HashLiteral(Token, Vec<(Expression, Expression)>),
 }
 
 impl Node for Expression {
@@ -35,6 +37,7 @@ impl Node for Expression {
             Expression::CallExpression(token, _, _) => { token.literal.clone() }
             Expression::ArrayLiteral(token, _) => { token.literal.clone() }
             Expression::IndexExpression(token, _, _) => { token.literal.clone() }
+            Expression::HashLiteral(token, _) => { token.literal.clone() }
         }
     }
 }
@@ -88,6 +91,14 @@ impl Display for Expression {
             }
             Expression::IndexExpression(_, left, index) => {
                 write!(f, "({}[{}])", left.deref(), index.deref())           
+            }
+            Expression::HashLiteral(_, pairs) => {
+                write!(f, "{{{}}}",
+                       pairs
+                           .iter()
+                           .map(|pair| format!("{}: {}", pair.0.to_string(), pair.1.to_string()))
+                           .collect::<Vec<String>>()
+                           .join(", "))
             }
         }
     }

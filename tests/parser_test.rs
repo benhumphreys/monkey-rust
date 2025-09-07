@@ -1,11 +1,14 @@
 #![allow(dead_code)]
 
+use std::collections::HashMap;
 use monkey::ast;
 use monkey::ast::Statement::ExpressionStatement;
 use monkey::ast::{Expression, Node, Program, Statement};
 use monkey::lexer::Lexer;
 use monkey::parser::Parser;
 use std::ops::Deref;
+use monkey::token::Token;
+use monkey::token::TokenType::StringLiteral;
 
 #[test]
 fn test_let_statements() {
@@ -390,6 +393,128 @@ fn test_parsing_index_expressions() {
     }
 }
 
+#[test]
+fn test_parsing_empty_hash_literal() {
+    let input = "{}";
+    let expression = parse_single_expression_program(input);
+
+    if let Expression::HashLiteral(_, pairs) = expression {
+        assert_eq!(pairs.len(), 0);
+    } else {
+        panic!("Expression not HashLiteral. Got={:?}", expression);
+    }
+}
+
+#[test]
+fn test_parsing_hash_literals_string_key() {
+    let input = "{\"one\": 1, \"two\": 2, \"three\": 3}";
+    let expected = HashMap::from([
+        ("one", 1),
+        ("two", 2),
+        ("three", 3)]);
+
+    let expression = parse_single_expression_program(input);
+
+    if let Expression::HashLiteral(_, pairs) = expression {
+        assert_eq!(pairs.len(), expected.len());
+
+        for (key, value) in pairs {
+            if let Expression::StringLiteral(_, string_key) = key {
+                let expected_value = expected[string_key.as_str()];
+                assert_integer_literal(&value, expected_value);
+            } else {
+                panic!("Key is not StringLiteral. Got={:?}", key);
+            }
+        }
+    } else {
+        panic!("Expression not HashLiteral. Got={:?}", expression);
+    }
+}
+
+#[test]
+fn test_parsing_hash_literals_boolean_keys() {
+    let input = "{true: 1, false: 2}";
+    let expected = HashMap::from([(true, 1), (false, 2)]);
+
+    let expression = parse_single_expression_program(input);
+
+    if let Expression::HashLiteral(_, pairs) = expression {
+        assert_eq!(pairs.len(), expected.len());
+
+        for (key, value) in pairs {
+            if let Expression::Boolean(_, bool_key) = key {
+                let expected_value = expected[&bool_key];
+                assert_integer_literal(&value, expected_value);
+            } else {
+                panic!("Key is not Boolean. Got={:?}", key);
+            }
+        }
+    } else {
+        panic!("Expression not HashLiteral. Got={:?}", expression);
+    }
+}
+
+#[test]
+fn test_parsing_hash_literals_integer_keys() {
+    let input = "{1: 1, 2: 2, 3: 3}";
+    let expected = HashMap::from([(1, 1), (2, 2), (3, 3)]);
+
+    let expression = parse_single_expression_program(input);
+
+    if let Expression::HashLiteral(_, pairs) = expression {
+        assert_eq!(pairs.len(), expected.len());
+
+        for (key, value) in pairs {
+            if let Expression::IntegerLiteral(_, int_key) = key {
+                let expected_value = expected[&int_key];
+                assert_integer_literal(&value, expected_value);
+            } else {
+                panic!("Key is not IntegerLiteral. Got={:?}", key);
+            }
+        }
+    } else {
+        panic!("Expression not HashLiteral. Got={:?}", expression);
+    }
+}
+
+#[test]
+fn test_parsing_hash_literals_with_expressions() {
+    let input = r#"{"one": 0 + 1, "two": 10 - 8, "three": 15 / 5}"#;
+
+    let expression = parse_single_expression_program(input);
+
+    if let Expression::HashLiteral(_, pairs) = expression {
+        assert_eq!(pairs.len(), 3);
+
+        let (actual_key_0, actual_value_0) = pairs.get(0).unwrap();
+        if let Expression::StringLiteral(_, string_key) = actual_key_0 {
+            assert_eq!(string_key, "one");
+            assert_infix_expression(actual_value_0, Value::Integer(0), "+", Value::Integer(1));
+        } else {
+            panic!("Key is not StringLiteral. Got={:?}", actual_key_0);
+        }
+
+        let (actual_key_1, actual_value_1) = pairs.get(1).unwrap();
+        if let Expression::StringLiteral(_, string_key) = actual_key_1 {
+            assert_eq!(string_key, "two");
+            assert_infix_expression(actual_value_1, Value::Integer(10), "-", Value::Integer(8));
+        } else {
+            panic!("Key is not StringLiteral. Got={:?}", actual_key_1);
+        }
+
+        let (actual_key_2, actual_value_2) = pairs.get(2).unwrap();
+        if let Expression::StringLiteral(_, string_key) = actual_key_2 {
+            assert_eq!(string_key, "three");
+            assert_infix_expression(actual_value_2, Value::Integer(15), "/", Value::Integer(5));
+        } else {
+            panic!("Key is not StringLiteral. Got={:?}", actual_key_2);
+        }
+    } else {
+        panic!("Expression not HashLiteral. Got={:?}", expression);
+    }
+
+}
+
 fn assert_infix_expression(
     exp: &ast::Expression,
     expected_left: Value,
@@ -488,4 +613,8 @@ fn parse_single_expression_program(code: &str) -> Expression {
     } else {
         panic!("Statement not ExpressionStatement. Got={:?}", stmt);
     }
+}
+
+fn build_string_literal(value: &str) -> Expression {
+    Expression::StringLiteral(Token::new(StringLiteral, value), value.to_string())
 }

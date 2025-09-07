@@ -6,6 +6,7 @@ use monkey::environment::Environment;
 use monkey::evaluator::eval_program;
 use monkey::lexer::Lexer;
 use monkey::object::Object;
+use monkey::object::Object::StringObject;
 use monkey::parser::Parser;
 
 #[test]
@@ -353,6 +354,40 @@ fn test_array_index_expressions() {
             ExpectedValue::Error(expected_error) => assert_error_object(evaluated, expected_error.as_str(), test_input),
             ExpectedValue::Null => { assert_null_object(evaluated) }
         }
+    }
+}
+
+#[test]
+fn test_hash_literals() {
+    let test_input = r#"let two = "two";
+                {
+                "one": 10 - 9,
+                two: 1 + 1,
+                "thr" + "ee": 6 / 2,
+                4: 4,
+                true: 5,
+                false: 6
+                }"#;
+
+    let expected = vec![
+        (StringObject("one".to_string()), 1),
+        (StringObject("two".to_string()), 2),
+        (StringObject("three".to_string()), 3),
+        (Object::Integer(4), 4),
+        (Object::Boolean(true), 5),
+        (Object::Boolean(false), 6),
+    ];
+
+    let evaluated = eval_input(test_input);
+
+    if let Object::HashObject(pairs) = evaluated {
+        assert_eq!(pairs.len(), expected.len());
+        for (key, expected_value) in expected {
+            let actual_value = pairs[&key].clone();
+            assert_integer_object(actual_value, expected_value, test_input);
+        }
+    } else {
+        panic!("Object not HashObject. Got={:?}", evaluated);
     }
 }
 

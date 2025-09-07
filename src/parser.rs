@@ -69,6 +69,7 @@ impl Parser {
         p.register_prefix(If, Parser::parse_if_expression);
         p.register_prefix(Function, Parser::parse_function_literal);
         p.register_prefix(LeftBracket, Parser::parse_array_literal);
+        p.register_prefix(LeftBrace, Parser::parse_hash_literal);
 
         p.register_infix(Plus, Parser::parse_infix_expression);
         p.register_infix(Minus, Parser::parse_infix_expression);
@@ -395,6 +396,34 @@ impl Parser {
         Ok(Expression::IndexExpression(token, Box::new(left), Box::new(index)))
     }
 
+    fn parse_hash_literal(&mut self) -> Result<Expression, ParseError> {
+        let token = self.cur_token.clone();
+        let mut pairs = Vec::new();
+
+        while !self.peek_token_is(&RightBrace) {
+            self.next_token();
+            let key = self.parse_expression(Lowest)?;
+
+            if !self.expect_peek(&Colon) {
+                return Err(ParseError::default());
+            }
+
+            self.next_token();
+            let value = self.parse_expression(Lowest)?;
+
+            pairs.push((key, value));
+
+            if !self.peek_token_is(&RightBrace) && !self.expect_peek(&Comma) {
+                return Err(ParseError::default());
+            }
+        }
+
+        if !self.expect_peek(&RightBrace) {
+            return Err(ParseError::default());
+        }
+        Ok(Expression::HashLiteral(token, pairs))
+    }
+
     fn parse_array_literal(&mut self) -> Result<Expression, ParseError> {
         let token = self.cur_token.clone();
         let elements = self.parse_expression_list(TokenType::RightBracket)?;
@@ -410,12 +439,12 @@ impl Parser {
         }
 
         self.next_token();
-        list.push(self.parse_expression(Lowest)?.clone());
+        list.push(self.parse_expression(Lowest)?);
 
         while self.peek_token_is(&Comma) {
             self.next_token();
             self.next_token();
-            list.push(self.parse_expression(Lowest)?.clone());
+            list.push(self.parse_expression(Lowest)?);
         }
 
         if !self.expect_peek(&end) {
