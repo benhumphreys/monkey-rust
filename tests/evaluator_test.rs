@@ -392,6 +392,32 @@ fn test_hash_literals() {
 }
 
 #[test]
+fn test_hash_index_expressions() {
+    let test_cases = vec![
+        (r#"{"foo": 5}["foo"]"#, ExpectedValue::Integer(5)),
+        (r#"{"foo": 5}["bar"]"#, ExpectedValue::Null),
+        (r#"let key = "foo"; {"foo": 5}[key]"#, ExpectedValue::Integer(5)),
+        (r#"{}["foo"]"#, ExpectedValue::Null),
+        (r#"{5: 5}[5]"#, ExpectedValue::Integer(5)),
+        (r#"{true: 5}[true]"#, ExpectedValue::Integer(5)),
+        (r#"{false: 5}[false]"#, ExpectedValue::Integer(5)),
+        (r#"{"name": "Monkey"}[fn(x) {x}];"#, ExpectedValue::Error("unusable as hash key: FUNCTION".to_string())),
+    ];
+
+    for test_case in test_cases {
+        let test_input = test_case.0;
+        let expected = test_case.1;
+        let evaluated = eval_input(test_input);
+        match expected {
+            ExpectedValue::Integer(expected_value) => assert_integer_object(evaluated, expected_value, test_input),
+            ExpectedValue::Error(expected_error) => assert_error_object(evaluated, expected_error.as_str(), test_input),
+            ExpectedValue::Null => assert_null_object(evaluated),
+            _ => panic!("programmer error: expected type is not value for array indexing tests"),
+        }
+    }
+}
+
+#[test]
 fn test_fibonacci() {
     let test_input = "let fibonacci = fn(x) {
         if (x < 2) {

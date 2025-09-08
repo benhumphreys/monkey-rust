@@ -4,6 +4,7 @@ use std::collections::HashMap;
 use std::sync::LazyLock;
 use std::rc::Rc;
 use std::cell::RefCell;
+use std::hash::Hash;
 use crate::ast::{BlockStatement, Expression, Identifier, Program, Statement};
 use crate::builtins::builtins;
 use crate::environment::Environment;
@@ -162,8 +163,24 @@ fn eval_hash_literal(pairs: &Vec<(Expression, Expression)>, env: &mut Rc<RefCell
 fn eval_index_expression(left: &Object, index: &Object) -> Object {
     if left.object_type() == "ARRAY" && index.object_type() == "INTEGER" {
         eval_array_index_expression(left, index)
+    } else if left.object_type() == "HASH" {
+        eval_hash_index_expression(left, index)
     } else {
         Object::Error(format!("index operator not supported: {}", left.object_type()))
+    }
+}
+
+fn eval_hash_index_expression(hash: &Object, index: &Object) -> Object {
+    if !index.is_hashable() {
+        return Object::Error(format!("unusable as hash key: {}", index.object_type()))
+    }
+
+    if let Object::HashObject(pairs) = hash {
+        pairs.get(index)
+            .cloned()
+            .unwrap_or(OBJECT_NULL)
+    } else {
+        Object::Error(format!("expected hash object. Got: {}", hash.object_type()))
     }
 }
 

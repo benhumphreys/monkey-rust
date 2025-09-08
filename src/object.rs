@@ -113,7 +113,7 @@ impl PartialEq for Object {
             (Object::ReturnValue(a), Object::ReturnValue(b)) => a == b,
             (Object::Function(_, _, _), Object::Function(_, _, _)) => false,
             (Object::Array(a), Object::Array(b)) => a == b,
-            (Object::HashObject(a), Object::HashObject(b)) => {
+            (Object::HashObject(_), Object::HashObject(_)) => {
                 panic!("Not implemented: HashObject ==")
             }
             (Object::Builtin(f1), Object::Builtin(f2)) => f1 == f2,
