@@ -1,4 +1,3 @@
-use std::collections::HashMap;
 use crate::token::Token;
 use std::fmt::{Debug, Display, Formatter};
 use std::ops::Deref;
@@ -26,18 +25,18 @@ pub enum Expression {
 impl Node for Expression {
     fn token_literal(&self) -> String {
         match self {
-            Expression::Identifier(token, _) => { token.literal.clone() }
-            Expression::IntegerLiteral(token, _) => { token.literal.clone() }
-            Expression::StringLiteral(token, _) => { token.literal.clone() }
-            Expression::Boolean(token, _) => {token.literal.clone() }
-            Expression::PrefixExpression(token, _, _) => { token.literal.clone() }
-            Expression::InfixExpression(token, _, _, _) => { token.literal.clone() }
-            Expression::IfExpression(token, _, _, _) => { token.literal.clone() }
-            Expression::FunctionLiteral(token, _, _) => { token.literal.clone() }
-            Expression::CallExpression(token, _, _) => { token.literal.clone() }
-            Expression::ArrayLiteral(token, _) => { token.literal.clone() }
-            Expression::IndexExpression(token, _, _) => { token.literal.clone() }
-            Expression::HashLiteral(token, _) => { token.literal.clone() }
+            Expression::Identifier(token, _) => token.literal.clone(),
+            Expression::IntegerLiteral(token, _) => token.literal.clone(),
+            Expression::StringLiteral(token, _) => token.literal.clone(),
+            Expression::Boolean(token, _) => token.literal.clone(),
+            Expression::PrefixExpression(token, _, _) => token.literal.clone(),
+            Expression::InfixExpression(token, _, _, _) => token.literal.clone(),
+            Expression::IfExpression(token, _, _, _) => token.literal.clone(),
+            Expression::FunctionLiteral(token, _, _) => token.literal.clone(),
+            Expression::CallExpression(token, _, _) => token.literal.clone(),
+            Expression::ArrayLiteral(token, _) => token.literal.clone(),
+            Expression::IndexExpression(token, _, _) => token.literal.clone(),
+            Expression::HashLiteral(token, _) => token.literal.clone(),
         }
     }
 }
@@ -96,7 +95,7 @@ impl Display for Expression {
                 write!(f, "{{{}}}",
                        pairs
                            .iter()
-                           .map(|pair| format!("{}: {}", pair.0.to_string(), pair.1.to_string()))
+                           .map(|pair| format!("{}: {}", pair.0, pair.1))
                            .collect::<Vec<String>>()
                            .join(", "))
             }
@@ -116,7 +115,7 @@ impl Identifier {
             token,
             value
         }
-    }    
+    }
 }
 
 impl Display for Identifier {
@@ -126,110 +125,6 @@ impl Display for Identifier {
 }
 
 impl Node for Identifier {
-    fn token_literal(&self) -> String {
-        self.token.literal.clone()
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct IntegerLiteral {
-    pub token: Token,
-    pub value: i64,
-}
-
-impl Node for IntegerLiteral {
-    fn token_literal(&self) -> String {
-        self.token.literal.clone()
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct Boolean {
-    token: Token,
-    value: bool
-}
-
-impl Display for Boolean {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.value)
-    }
-}
-
-impl Node for Boolean {
-    fn token_literal(&self) -> String { self.token.literal.clone() }
-}
-
-#[derive(Debug, Clone)]
-pub struct PrefixExpression {
-    token: Token,
-    operator: String,
-    right: Box<Expression>,
-}
-
-impl Node for PrefixExpression {
-    fn token_literal(&self) -> String {
-        self.token.literal.clone()
-    }
-}
-
-impl Display for PrefixExpression {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "({}{})", self.operator, self.right)
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct InfixExpression {
-    token: Token,
-    left: Box<Expression>,
-    operator: String,
-    right: Box<Expression>
-}
-
-impl Node for InfixExpression {
-    fn token_literal(&self) -> String {
-        self.token.literal.clone()
-    }
-}
-
-impl Display for InfixExpression {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "({} {} {})", self.left, self.operator, self.right)
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct ExpressionStatement {
-    token: Token,
-    expression: Expression,
-}
-
-impl Node for ExpressionStatement {
-    fn token_literal(&self) -> String {
-        self.token.literal.clone()
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct LetStatement {
-    pub token: Token,
-    pub name: Identifier,
-    pub value: Expression,
-}
-
-impl Node for LetStatement {
-    fn token_literal(&self) -> String {
-        self.token.literal.clone()
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct ReturnStatement {
-    token: Token,
-    return_value: Expression,
-}
-
-impl Node for ReturnStatement {
     fn token_literal(&self) -> String {
         self.token.literal.clone()
     }
@@ -301,70 +196,6 @@ impl Node for BlockStatement {
 }
 
 #[derive(Debug, Clone)]
-pub struct IfExpression {
-    pub token: Token,
-    pub condition: Expression,
-    pub consequence: BlockStatement,
-    pub alternative: Option<BlockStatement>,
-}
-
-impl Display for IfExpression {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "if{} {}", self.condition, self.consequence)?;
-        if let Some(alt) = &self.alternative {
-            write!(f, "else {}", alt)?;
-        }
-        Ok(())
-    }
-}
-
-impl Node for IfExpression {
-    fn token_literal(&self) -> String {
-        self.token.literal.clone()
-    }
-}
-
-
-#[derive(Debug, Clone)]
-pub struct FunctionLiteral {
-    token: Token,
-    parameters: Vec<Identifier>,
-    body: BlockStatement
-}
-
-impl Node for FunctionLiteral {
-    fn token_literal(&self) -> String {
-        self.token.literal.clone()
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct CallExpression {
-    token: Token,
-    function: Expression,
-    arguments: Vec<Expression>
-}
-
-impl Node for CallExpression {
-    fn token_literal(&self) -> String {
-        self.token.literal.clone()
-    }
-}
-
-
-impl Display for CallExpression {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}({})",
-               self.function,
-               self.arguments
-                   .iter()
-                   .map(|id| id.to_string())
-                   .collect::<Vec<String>>()
-                   .join(","))
-    }
-}
-
-#[derive(Debug, Clone)]
 pub struct Program {
     pub statements: Vec<Statement>,
 }
@@ -378,8 +209,8 @@ impl Program {
 
     pub fn token_literal(&self) -> String {
         match self.statements.is_empty() {
-            true => { String::new() },
-            false => { self.statements[0].token_literal().clone() }
+            true => String::new(),
+            false => self.statements[0].token_literal().clone()
         }
     }
 }

@@ -30,7 +30,7 @@ fn test_next_token() {
         [1, 2];\n\
         {\"foo\": \"bar\"}";
 
-    let expected_tokens = vec![
+    let expected_tokens = [
         (TokenType::Let, "let"),
         (TokenType::Ident, "five"),
         (TokenType::Assign, "="),

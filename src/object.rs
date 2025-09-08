@@ -1,15 +1,15 @@
 #![allow(dead_code)]
 #![allow(unpredictable_function_pointer_comparisons)]
 
-use std::fmt::{Display, Formatter};
-use std::rc::Rc;
-use std::cell::RefCell;
-use std::collections::HashMap;
-use std::hash::{Hash, Hasher};
 use crate::ast::{BlockStatement, Identifier};
 use crate::environment::Environment;
+use std::cell::RefCell;
+use std::collections::HashMap;
+use std::fmt::{Display, Formatter};
+use std::hash::{Hash, Hasher};
+use std::rc::Rc;
 
-pub type BuiltinFunction = fn(Vec<Object>) -> Object;
+pub type BuiltinFunction = fn(&[Object]) -> Object;
 
 pub const OBJECT_BOOLEAN_TRUE: Object = Object::Boolean(true);
 pub const OBJECT_BOOLEAN_FALSE: Object = Object::Boolean(false);
@@ -66,7 +66,7 @@ impl Display for Object {
                 write!(f, "{{{}}}",
                        pairs
                            .iter()
-                           .map(|(key, value)| format!("{}: {}", key.to_string(), value.to_string()))
+                           .map(|(key, value)| format!("{}: {}", key, value))
                            .collect::<Vec<String>>()
                            .join(", "))
             }
@@ -130,10 +130,10 @@ impl Eq for Object {
 impl Hash for Object {
     fn hash<H: Hasher>(&self, state: &mut H) {
         match self {
-            Object::Integer(a) => a.hash(state),
-            Object::Boolean(a) => a.hash(state),
-            Object::StringObject(a) => a.hash(state),
-            _ => { panic!("Hash trait iot implemented for object type: {}", self.object_type())}
+            Object::Integer(val) => val.hash(state),
+            Object::Boolean(val) => val.hash(state),
+            Object::StringObject(val) => val.hash(state),
+            _ => { panic!("Hash trait not implemented for object type: {}", self.object_type())}
         }
     }
 }

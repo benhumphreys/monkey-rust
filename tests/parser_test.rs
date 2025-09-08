@@ -2,7 +2,6 @@
 
 use std::collections::HashMap;
 use monkey::ast;
-use monkey::ast::Statement::ExpressionStatement;
 use monkey::ast::{Expression, Node, Program, Statement};
 use monkey::lexer::Lexer;
 use monkey::parser::Parser;
@@ -12,7 +11,7 @@ use monkey::token::TokenType::StringLiteral;
 
 #[test]
 fn test_let_statements() {
-    let test_cases = vec![
+    let test_cases = [
         ("let x = 5;", "x", Value::Integer(5)),
         ("let y = true;", "y", Value::Boolean(true)),
         ("let foobar = y;", "foobar", Value::String("y".to_string())),
@@ -45,7 +44,7 @@ fn test_let_statement_with_errors() {
 
 #[test]
 fn test_return_statements() {
-    let test_cases = vec![
+    let test_cases = [
         ("return 5;", Value::Integer(5)),
         ("return true;", Value::Boolean(true)),
         ("return foobar;", Value::String("foobar".to_string())),
@@ -84,7 +83,7 @@ fn test_integer_literal_expression() {
 
 #[test]
 fn test_parsing_prefix_expressions() {
-    let test_cases = vec![
+    let test_cases = [
         ("!5", "!", Value::Integer(5)),
         ("-15", "-", Value::Integer(15)),
         ("!true", "!", Value::Boolean(true)),
@@ -108,7 +107,7 @@ fn test_parsing_prefix_expressions() {
 
 #[test]
 fn test_parsing_infix_expressions() {
-    let test_cases = vec![
+    let test_cases = [
         ("5 + 5;", Value::Integer(5), "+", Value::Integer(5)),
         ("5 - 5;", Value::Integer(5), "-", Value::Integer(5)),
         ("5 * 5;", Value::Integer(5), "*", Value::Integer(5)),
@@ -155,7 +154,7 @@ fn test_parsing_infix_expressions() {
 
 #[test]
 fn test_operator_precedence_parsing() {
-    let test_cases = vec![
+    let test_cases = [
         ("-a * b;", "((-a) * b)"),
         ("!-a", "(!(-a))"),
         ("a + b + c", "((a + b) + c)"),
@@ -198,7 +197,7 @@ fn test_operator_precedence_parsing() {
 
 #[test]
 fn test_boolean_expression() {
-    let test_cases = vec![("true;", true), ("false;", false)];
+    let test_cases = [("true;", true), ("false;", false)];
 
     for test_case in test_cases {
         let test_code = test_case.0;
@@ -226,7 +225,7 @@ fn test_if_expression() {
         // Verify consequence
         assert_eq!(consequence.statements.len(), 1);
         let consequence_stmt = &consequence.statements[0];
-        if let ExpressionStatement(_, consequence_expr) = consequence_stmt {
+        if let Statement::ExpressionStatement(_, consequence_expr) = consequence_stmt {
             assert_identifier(&consequence_expr, "x");
         } else {
             panic!("Expression not IfExpression. Got={:?}", consequence_stmt);
@@ -258,7 +257,7 @@ fn test_if_else_expression() {
         // Verify consequence
         assert_eq!(consequence.statements.len(), 1);
         let consequence_stmt = &consequence.statements[0];
-        if let ExpressionStatement(_, consequence_expr) = consequence_stmt {
+        if let Statement::ExpressionStatement(_, consequence_expr) = consequence_stmt {
             assert_identifier(&consequence_expr, "x");
         } else {
             panic!(
@@ -271,7 +270,7 @@ fn test_if_else_expression() {
         let alternative = maybe_alternative.expect("Alternative is empty");
         assert_eq!(alternative.statements.len(), 1);
         let alternative_stmt = &alternative.statements[0];
-        if let ExpressionStatement(_, alternative_expr) = alternative_stmt {
+        if let Statement::ExpressionStatement(_, alternative_expr) = alternative_stmt {
             assert_identifier(&alternative_expr, "y");
         } else {
             panic!(
@@ -319,7 +318,7 @@ fn test_function_literal_parsing() {
 
 #[test]
 fn test_function_parameter_parsing() {
-    let test_cases = vec![
+    let test_cases = [
         ("fn() {}", vec![]),
         ("fn(x) {}", vec!["x"]),
         ("fn(x, y, z) {}", vec!["x", "y", "z"]),
@@ -609,7 +608,7 @@ fn parse_single_statement_program(code: &str) -> Statement {
 fn parse_single_expression_program(code: &str) -> Expression {
     let stmt = parse_single_statement_program(code);
     if let Statement::ExpressionStatement(_, expression) = stmt {
-        return expression;
+        expression
     } else {
         panic!("Statement not ExpressionStatement. Got={:?}", stmt);
     }

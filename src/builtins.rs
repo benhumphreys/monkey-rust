@@ -1,5 +1,5 @@
-use std::collections::HashMap;
 use crate::object::{Object, ObjectType, OBJECT_NULL};
+use std::collections::HashMap;
 
 pub fn builtins() -> HashMap<String, Object>  {
     HashMap::from([
@@ -12,7 +12,7 @@ pub fn builtins() -> HashMap<String, Object>  {
     ])
 }
 
-fn len(args: Vec<Object>) -> Object {
+fn len(args: &[Object]) -> Object {
     if args.len() != 1 {
         return Object::Error(format!("wrong number of arguments. got={}, want=1", args.len()));
     }
@@ -24,13 +24,13 @@ fn len(args: Vec<Object>) -> Object {
     }
 }
 
-fn first(args: Vec<Object>) -> Object {
+fn first(args: &[Object]) -> Object {
     if args.len() != 1 {
         return Object::Error(format!("wrong number of arguments. got={}, want=1", args.len()));
     }
 
     if let Object::Array(elements) = &args[0] {
-        if elements.len() > 0 {
+        if !elements.is_empty() {
             elements[0].clone()
         } else {
             OBJECT_NULL
@@ -39,7 +39,7 @@ fn first(args: Vec<Object>) -> Object {
         Object::Error(format!("argument to 'first' must be ARRAY, got {}", args[0].object_type()))
     }
 }
-fn last(args: Vec<Object>) -> Object {
+fn last(args: &[Object]) -> Object {
     if args.len() != 1 {
         return Object::Error(format!("wrong number of arguments. got={}, want=1", args.len()));
     }
@@ -56,7 +56,7 @@ fn last(args: Vec<Object>) -> Object {
     }
 }
 
-fn rest(args: Vec<Object>) -> Object {
+fn rest(args: &[Object]) -> Object {
     if args.len() != 1 {
         return Object::Error(format!("wrong number of arguments. got={}, want=1", args.len()));
     }
@@ -73,7 +73,7 @@ fn rest(args: Vec<Object>) -> Object {
     }
 }
 
-fn push(args: Vec<Object>) -> Object {
+fn push(args: &[Object]) -> Object {
     if args.len() != 2 {
         return Object::Error(format!("wrong number of arguments. got={}, want=2", args.len()));
     }
@@ -87,7 +87,7 @@ fn push(args: Vec<Object>) -> Object {
     }
 }
 
-fn puts(args: Vec<Object>) -> Object {
+fn puts(args: &[Object]) -> Object {
     for arg in args {
         println!("{}", arg);
     }

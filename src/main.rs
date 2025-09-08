@@ -1,13 +1,13 @@
 #![allow(unused)]
 
-use std::{env, io};
-use std::io::{BufRead, Read, Write};
-use std::rc::Rc;
-use std::cell::RefCell;
 use monkey::environment::Environment;
 use monkey::evaluator::eval_program;
 use monkey::lexer::Lexer;
 use monkey::parser::{ParseError, Parser};
+use std::cell::RefCell;
+use std::io::{BufRead, Read, Write};
+use std::rc::Rc;
+use std::{env, io};
 
 fn main() {
     let args: Vec<String> = env::args().collect();

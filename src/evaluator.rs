@@ -1,14 +1,13 @@
 #![allow(dead_code)]
 
-use std::collections::HashMap;
-use std::sync::LazyLock;
-use std::rc::Rc;
-use std::cell::RefCell;
-use std::hash::Hash;
 use crate::ast::{BlockStatement, Expression, Identifier, Program, Statement};
 use crate::builtins::builtins;
 use crate::environment::Environment;
 use crate::object::{IsHashable, Object, ObjectType, OBJECT_BOOLEAN_FALSE, OBJECT_BOOLEAN_TRUE, OBJECT_NULL};
+use std::cell::RefCell;
+use std::collections::HashMap;
+use std::rc::Rc;
+use std::sync::LazyLock;
 
 const BUILTINS: LazyLock<HashMap<String, Object>> = LazyLock::new(builtins);
 
@@ -110,7 +109,7 @@ fn eval_expression(expr: &Expression, env: &mut Rc<RefCell<Environment>>) -> Obj
                 return evaluated_args.first().unwrap().clone();
             }
 
-            apply_function(&evaluated_function, evaluated_args)
+            apply_function(&evaluated_function, &evaluated_args)
         }
         Expression::ArrayLiteral(_, elements) => {
             let evaluated_elements = eval_expressions(elements, env);
@@ -202,10 +201,10 @@ fn eval_array_index_expression(array: &Object, index: &Object) -> Object {
     }
 }
 
-fn apply_function(function: &Object, args: Vec<Object>) -> Object {
+fn apply_function(function: &Object, args: &Vec<Object>) -> Object {
     match function {
         Object::Function(parameters, body, env) => {
-            let mut extended_env = extend_function_env(parameters, env, &args);
+            let mut extended_env = extend_function_env(parameters, env, args);
             let evaluated = eval_block_statement(body, &mut extended_env);
             unwrap_return_value(evaluated)
         }

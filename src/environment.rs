@@ -1,9 +1,9 @@
 #![allow(dead_code)]
 
+use crate::object::Object;
+use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
-use std::cell::RefCell;
-use crate::object::Object;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Environment {

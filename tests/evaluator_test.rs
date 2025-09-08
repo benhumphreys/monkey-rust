@@ -11,7 +11,7 @@ use monkey::parser::Parser;
 
 #[test]
 fn test_eval_integer_expression() {
-    let test_cases = vec![
+    let test_cases = [
         ("5", 5),
         ("10", 10),
         ("-5", -5),
@@ -39,7 +39,7 @@ fn test_eval_integer_expression() {
 
 #[test]
 fn test_eval_boolean_expression() {
-    let test_cases = vec![
+    let test_cases = [
         ("true", true),
         ("false", false),
         ("1 < 2", true),
@@ -71,7 +71,7 @@ fn test_eval_boolean_expression() {
 
 #[test]
 fn test_bang_operator() {
-    let test_cases = vec![
+    let test_cases = [
         ("!true", false),
         ("!false", true),
         ("!5", false),
@@ -90,7 +90,7 @@ fn test_bang_operator() {
 
 #[test]
 fn test_if_else_expressions() {
-    let test_cases = vec![
+    let test_cases = [
         ("if (true) { 10 }", Some(10)),
         ("if (false) { 10 }", None),
         ("if (1) { 10 }", Some(10)),
@@ -113,7 +113,7 @@ fn test_if_else_expressions() {
 
 #[test]
 fn test_return_statements() {
-    let test_cases = vec![
+    let test_cases = [
         ("return 10;", 10),
         ("return 10; 9;", 10),
         ("return 2 * 5; 9;", 10),
@@ -135,7 +135,7 @@ fn test_return_statements() {
 
 #[test]
 fn test_error_handling() {
-    let test_cases = vec![
+    let test_cases = [
         ("5 + true;", "type mismatch: INTEGER + BOOLEAN"),
         ("5 + true; 5;", "type mismatch: INTEGER + BOOLEAN"),
         ("-true", "unknown operator: -BOOLEAN"),
@@ -164,7 +164,7 @@ fn test_error_handling() {
 
 #[test]
 fn test_let_statements() {
-    let test_cases = vec![
+    let test_cases = [
         ("let a = 5; a;", 5),
         ("let a = 5 * 5; a;", 25),
         ("let a = 5; let b = a; b;", 5),
@@ -196,7 +196,7 @@ fn test_function_object() {
 
 #[test]
 fn test_function_application() {
-    let test_cases = vec![
+    let test_cases = [
         ("let identity = fn(x) { x; }; identity(5);", 5),
         ("let identity = fn(x) { return x; }; identity(5);", 5),
         ("let double = fn(x) { x * 2; }; double(5);", 10),
@@ -270,7 +270,7 @@ fn test_string_concatenation() {
 
 #[test]
 fn test_builtin_functions() {
-    let test_cases = vec![
+    let test_cases = [
         ("len(\"\")", ExpectedValue::Integer(0)),
         ("len(\"four\")", ExpectedValue::Integer(4)),
         ("len(\"hello world\")", ExpectedValue::Integer(11)),
@@ -331,7 +331,7 @@ fn test_array_literal() {
 
 #[test]
 fn test_array_index_expressions() {
-    let test_cases = vec![
+    let test_cases = [
         ("[1, 2, 3][0]", ExpectedValue::Integer(1)),
         ("[1, 2, 3][1]", ExpectedValue::Integer(2)),
         ("[1, 2, 3][2]", ExpectedValue::Integer(3)),
@@ -369,7 +369,7 @@ fn test_hash_literals() {
                 false: 6
                 }"#;
 
-    let expected = vec![
+    let expected = [
         (StringObject("one".to_string()), 1),
         (StringObject("two".to_string()), 2),
         (StringObject("three".to_string()), 3),
@@ -393,7 +393,7 @@ fn test_hash_literals() {
 
 #[test]
 fn test_hash_index_expressions() {
-    let test_cases = vec![
+    let test_cases = [
         (r#"{"foo": 5}["foo"]"#, ExpectedValue::Integer(5)),
         (r#"{"foo": 5}["bar"]"#, ExpectedValue::Null),
         (r#"let key = "foo"; {"foo": 5}[key]"#, ExpectedValue::Integer(5)),
