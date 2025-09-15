@@ -1,12 +1,10 @@
 #![allow(unused)]
 
-use monkey::environment::Environment;
-use monkey::evaluator::eval_program;
+use monkey::compiler::Compiler;
 use monkey::lexer::Lexer;
 use monkey::parser::{ParseError, Parser};
-use std::cell::RefCell;
+use monkey::vm::Vm;
 use std::io::{BufRead, Read, Write};
-use std::rc::Rc;
 use std::{env, io};
 
 fn main() {
@@ -30,8 +28,15 @@ fn execute(filename: String) {
         print_parser_errors(&parser.errors());
         return;
     }
-    let mut env = Rc::new(RefCell::new(Environment::new()));
-    eval_program(&program, &mut env);
+
+    let mut comp = Compiler::new();
+    let result = comp.compile(&program);
+    if result.is_err() {
+        println!("Compilation failed: {}", result.unwrap_err());
+    }
+
+    let mut vm = Vm::new(&comp.bytecode());
+    vm.run();
 }
 
 fn repl() {
@@ -39,7 +44,6 @@ fn repl() {
     let mut lines = stdin.lock().lines();
 
     println!("Monkey programming language");
-    let mut env = Rc::new(RefCell::new(Environment::new()));
     loop {
         print!(">> ");
         io::stdout().flush().unwrap();
@@ -53,8 +57,18 @@ fn repl() {
                 print_parser_errors(&parser.errors());
                 continue;
             }
-            let evaluated = eval_program(&program, &mut env);
-            println!("{}", evaluated);
+
+            let mut comp = Compiler::new();
+            let result = comp.compile(&program);
+            if result.is_err() {
+                println!("Compilation failed: {}", result.unwrap_err());
+                continue;
+            }
+
+            let mut vm = Vm::new(&comp.bytecode());
+            vm.run();
+            let stack_top = vm.stack_top();
+            println!("{}", stack_top);
         } else {
             break;
         }
