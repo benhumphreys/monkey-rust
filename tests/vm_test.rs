@@ -18,7 +18,7 @@ fn test_integer_arithmetic() {
         },
         VmTestCase {
             input: "1 + 2".to_string(),
-            expected: Value::Integer(2), // FIXME - change to 3 once add is implemented
+            expected: Value::Integer(3),
         },
     ];
 

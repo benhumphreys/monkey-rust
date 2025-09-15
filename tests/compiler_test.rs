@@ -1,8 +1,8 @@
 #![allow(dead_code)]
 
 use monkey::ast::Program;
-use monkey::code::Opcode::OpConstant;
-use monkey::code::{make, Instructions};
+use monkey::code::Opcode::{OpAdd, OpConstant};
+use monkey::code::{disassemble, make, Instructions};
 use monkey::compiler::Compiler;
 use monkey::lexer::Lexer;
 use monkey::object::Object;
@@ -27,7 +27,8 @@ fn test_integer_arithmatic() {
             expected_constants: vec![Value::Integer(1), Value::Integer(2)],
             expected_instructions: vec![
                 make(OpConstant, vec![0]),
-                make(OpConstant, vec![1])
+                make(OpConstant, vec![1]),
+                make(OpAdd, vec![]),
             ],
         }];
 
@@ -52,11 +53,14 @@ fn run_compiler_test(test_cases: Vec<CompilerTestCase>) {
 }
 
 fn assert_instructions(actual: Instructions, expected: Vec<Instructions>) {
-    let concatted = concat_instructions(expected);
+    let concatenated = concat_instructions(expected);
 
-    assert_eq!(actual.len(), concatted.len(), "instruction length mismatch");
+    assert_eq!(actual.len(), concatenated.len(), "wrong instruction length.\nwant={}\ngot={}",
+               disassemble(&concatenated), disassemble(&actual));
+
     for i in 0..actual.len() {
-        assert_eq!(actual[i], concatted[i], "instruction mismatch");
+        assert_eq!(actual[i], concatenated[i], "wrong instruction at {}.\nwant={}\ngot={}",
+                   i, disassemble(&concatenated), disassemble(&actual));
     }
 }
 

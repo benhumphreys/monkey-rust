@@ -1,6 +1,6 @@
 use crate::code::{convert_u16_to_i32_be, Instructions, Opcode};
 use crate::compiler::Bytecode;
-use crate::object::{Object, OBJECT_NULL};
+use crate::object::{Object, ObjectType, OBJECT_NULL};
 
 const STACK_SIZE: usize = 2048;
 
@@ -43,6 +43,21 @@ impl Vm {
 
                     self.push(&self.constants[const_index].clone())?;
                 }
+                Opcode::OpAdd => {
+                    ip += 1; // One byte op, plus no operands
+                    let right = self.pop();
+                    let left = self.pop();
+
+                    if let Object::Integer(right_value) = right {
+                        if let Object::Integer(left_value) = left {
+                           self.push(&Object::Integer(left_value + right_value))?;
+                        } else {
+                            return Err(format!("expected integer object. Got: {}", left.object_type()));
+                        }
+                    } else {
+                        return Err(format!("expected integer object. Got: {}", right.object_type()));
+                    }
+                }
             }
         }
 
@@ -57,5 +72,12 @@ impl Vm {
         self.stack[self.sp as usize] = obj.clone();
         self.sp += 1;
         Ok(())
+    }
+
+    fn pop(&mut self) -> Object {
+        // TODO: Handle underflow
+        let obj = self.stack[self.sp as usize - 1].clone();
+        self.sp -= 1;
+        obj
     }
 }

@@ -51,7 +51,14 @@ impl Compiler {
             Expression::InfixExpression(_, left, operator, right) => {
                 self.compile_expression(left)?;
                 self.compile_expression(right)?;
-                Ok(())
+
+                match operator.as_str() {
+                    "+" => {
+                        self.emit(Opcode::OpAdd, vec![]);
+                        Ok(())
+                    },
+                    &_ => Err(format!("unknown operator: {}", operator))
+                }
             }
             Expression::IfExpression(_, _, _, _) => {todo!()}
             Expression::FunctionLiteral(_, _, _) => {todo!()}

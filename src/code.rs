@@ -1,4 +1,4 @@
-use crate::code::Opcode::OpConstant;
+use crate::code::Opcode::{OpAdd, OpConstant};
 use std::fmt;
 use std::fmt::Write;
 
@@ -8,12 +8,14 @@ pub type Instructions = Vec<u8>;
 #[repr(u8)]
 pub enum Opcode {
     OpConstant = 0,
+    OpAdd = 1,
 }
 
 impl Opcode {
     pub fn from_ordinal(ordinal: u8) -> Result<Opcode, String> {
         match ordinal {
             0 => Ok(OpConstant),
+            1 => Ok(OpAdd),
             _ => Err(format!("ERROR: no definition for opcode: {}", ordinal)),
         }
     }
@@ -21,6 +23,7 @@ impl Opcode {
     pub fn operand_widths(&self) -> Vec<u32> {
         match self {
             OpConstant => vec![2],
+            OpAdd => vec![],
         }
     }
 }
@@ -28,7 +31,8 @@ impl Opcode {
 impl fmt::Display for Opcode {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            OpConstant => write!(f, "CONSTANT")
+            OpConstant => write!(f, "OpConstant"),
+            OpAdd => write!(f, "OpAdd"),
         }
     }
 }
@@ -89,6 +93,7 @@ fn format_instruction(op: &Opcode, operands: &[i32]) -> String {
     }
 
     match operand_count {
+        0 => format!("{}", op),
         1 => format!("{} {}", op, operands[0]),
         _ => panic!("Unhandled operand count for {}", op),
     }
