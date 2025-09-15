@@ -34,7 +34,7 @@ impl Vm {
     pub fn run(&mut self) -> VmResult {
         let mut ip = 0;
         while ip < self.instructions.len() {
-            let op = Opcode::from_ordinal(self.instructions[ip]);
+            let op = Opcode::from_ordinal(self.instructions[ip])?;
 
             match op {
                 Opcode::OpConstant => {
