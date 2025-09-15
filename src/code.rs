@@ -15,7 +15,7 @@ pub enum Opcode {
 }
 
 impl Opcode {
-    fn from_ordinal(ordinal: u8) -> Opcode {
+    pub fn from_ordinal(ordinal: u8) -> Opcode {
         match ordinal {
             0 => OpConstant,
             _ => panic!("Invalid opcode ordinal: {}", ordinal),

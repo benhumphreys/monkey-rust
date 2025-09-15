@@ -20,7 +20,7 @@ struct CompilerTestCase {
 }
 
 #[test]
-fn test_integer_arithmetic() {
+fn test_integer_arithmatic() {
     let test_case = vec![
         CompilerTestCase {
             input: String::from("1 + 2"),
