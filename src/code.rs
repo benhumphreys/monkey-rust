@@ -1,4 +1,4 @@
-use crate::code::Opcode::{OpAdd, OpConstant};
+use crate::code::Opcode::{OpAdd, OpConstant, OpDiv, OpMul, OpPop, OpSub};
 use std::fmt;
 use std::fmt::Write;
 
@@ -9,7 +9,10 @@ pub type Instructions = Vec<u8>;
 pub enum Opcode {
     OpConstant = 0,
     OpAdd,
-    OpPop
+    OpPop,
+    OpSub,
+    OpMul,
+    OpDiv,
 }
 
 impl Opcode {
@@ -17,7 +20,10 @@ impl Opcode {
         match ordinal {
             0 => Ok(OpConstant),
             1 => Ok(OpAdd),
-            2 => Ok(Opcode::OpPop),
+            2 => Ok(OpPop),
+            3 => Ok(OpSub),
+            4 => Ok(OpMul),
+            5 => Ok(OpDiv),
             _ => Err(format!("ERROR: no definition for opcode: {}", ordinal)),
         }
     }
@@ -26,7 +32,10 @@ impl Opcode {
         match self {
             OpConstant => vec![2],
             OpAdd => vec![],
-            Opcode::OpPop => vec![]
+            OpPop => vec![],
+            OpSub => vec![],
+            OpMul => vec![],
+            OpDiv => vec![],
         }
     }
 }
@@ -36,7 +45,10 @@ impl fmt::Display for Opcode {
         match self {
             OpConstant => write!(f, "OpConstant"),
             OpAdd => write!(f, "OpAdd"),
-            Opcode::OpPop => write!(f, "OpPop"),
+            OpPop => write!(f, "OpPop"),
+            OpSub => write!(f, "OpSub"),
+            OpMul => write!(f, "OpMul"),
+            OpDiv => write!(f, "OpDiv"),
         }
     }
 }

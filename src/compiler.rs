@@ -61,6 +61,18 @@ impl Compiler {
                         self.emit(Opcode::OpAdd, vec![]);
                         Ok(())
                     },
+                    "-" => {
+                        self.emit(Opcode::OpSub, vec![]);
+                        Ok(())
+                    }
+                    "*" => {
+                        self.emit(Opcode::OpMul, vec![]);
+                        Ok(())
+                    }
+                    "/" => {
+                        self.emit(Opcode::OpDiv, vec![]);
+                        Ok(())
+                    }
                     &_ => Err(format!("unknown operator: {}", operator))
                 }
             }

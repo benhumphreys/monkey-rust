@@ -7,37 +7,35 @@ use monkey::vm::Vm;
 
 #[test]
 fn test_integer_arithmetic() {
-    let test_cases = vec![
-        VmTestCase {
-            input: "1".to_string(),
-            expected: Value::Integer(1),
-        },
-        /*VmTestCase {
-            input: "2".to_string(),
-            expected: Value::Integer(2),
-        },
-        VmTestCase {
-            input: "1 + 2".to_string(),
-            expected: Value::Integer(3),
-        },*/
+    let test_cases = [
+        ("1", Value::Integer(1)),
+        ("2", Value::Integer(2)),
+        ("1 + 2", Value::Integer(3)),
+        ("1 - 2", Value::Integer(-1)),
+        ("1 * 2", Value::Integer(2)),
+        ("4 / 2", Value::Integer(2)),
+        ("50 / 2 * 2 + 10 - 5", Value::Integer(55)),
+        ("5 + 5 + 5 + 5 - 10", Value::Integer(10)),
+        ("2 * 2 * 2 * 2 * 2", Value::Integer(32)),
+        ("5 * 2 + 10", Value::Integer(20)),
+        ("5 + 2 * 10", Value::Integer(25)),
+        ("5 * (2 + 10)", Value::Integer(60)),
     ];
 
-    run_vm_test(test_cases);
+    run_vm_test(test_cases.to_vec());
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 enum Value {
     Integer(i64),
 }
 
-struct VmTestCase {
-    input: String,
-    expected: Value
-}
-
-fn run_vm_test(test_cases: Vec<VmTestCase>) {
+fn run_vm_test(test_cases: Vec<(&str, Value)>) {
     for test in test_cases {
-        let program = parse(test.input.clone());
+        let input = test.0.to_string();
+        let expected = &test.1;
+
+        let program = parse(input.clone());
 
         let mut compiler = Compiler::new();
         let result = compiler.compile(&program);
@@ -53,7 +51,7 @@ fn run_vm_test(test_cases: Vec<VmTestCase>) {
         }
         let stack_elem = vm.last_popped_stack_elem();
 
-        assert_expected_object(&stack_elem, test.expected, test.input.as_str());
+        assert_expected_object(&stack_elem, expected.clone(), input.as_str());
     }
 }
 

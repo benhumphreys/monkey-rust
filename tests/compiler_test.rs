@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 
 use monkey::ast::Program;
-use monkey::code::Opcode::{OpAdd, OpConstant, OpPop};
+use monkey::code::Opcode::{OpAdd, OpConstant, OpDiv, OpMul, OpPop, OpSub};
 use monkey::code::{disassemble, make, Instructions};
 use monkey::compiler::Compiler;
 use monkey::lexer::Lexer;
@@ -41,7 +41,37 @@ fn test_integer_arithmetic() {
                 make(OpConstant, vec![1]),
                 make(OpPop, vec![]),
             ],
-        }
+        },
+        CompilerTestCase {
+            input: String::from("1 - 2"),
+            expected_constants: vec![Value::Integer(1), Value::Integer(2)],
+            expected_instructions: vec![
+                make(OpConstant, vec![0]),
+                make(OpConstant, vec![1]),
+                make(OpSub, vec![]),
+                make(OpPop, vec![]),
+            ],
+        },
+        CompilerTestCase {
+            input: String::from("1 * 2"),
+            expected_constants: vec![Value::Integer(1), Value::Integer(2)],
+            expected_instructions: vec![
+                make(OpConstant, vec![0]),
+                make(OpConstant, vec![1]),
+                make(OpMul, vec![]),
+                make(OpPop, vec![]),
+            ],
+        },
+        CompilerTestCase {
+            input: String::from("2 / 1"),
+            expected_constants: vec![Value::Integer(2), Value::Integer(1)],
+            expected_instructions: vec![
+                make(OpConstant, vec![0]),
+                make(OpConstant, vec![1]),
+                make(OpDiv, vec![]),
+                make(OpPop, vec![]),
+            ],
+        },
     ];
 
     run_compiler_test(test_case)
