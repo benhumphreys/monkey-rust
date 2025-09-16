@@ -31,6 +31,10 @@ impl Vm {
         self.stack[self.sp as usize - 1].clone()
     }
 
+    pub fn last_popped_stack_elem(&mut self) -> Object {
+        self.stack[self.sp as usize].clone()
+    }
+
     pub fn run(&mut self) -> VmResult {
         let mut ip = 0;
         while ip < self.instructions.len() {
@@ -39,12 +43,11 @@ impl Vm {
             match op {
                 Opcode::OpConstant => {
                     let const_index = convert_u16_to_i32_be(&self.instructions[ip + 1..]) as usize;
-                    ip += 3; // One byte op, plus two u8 operands
-
                     self.push(&self.constants[const_index].clone())?;
+                    ip += 3; // One byte op, plus two u8 operands
                 }
                 Opcode::OpAdd => {
-                    ip += 1; // One byte op, plus no operands
+                    ip += 1; // One byte op, no operands
                     let right = self.pop();
                     let left = self.pop();
 
@@ -57,6 +60,10 @@ impl Vm {
                     } else {
                         return Err(format!("expected integer object. Got: {}", right.object_type()));
                     }
+                }
+                Opcode::OpPop => {
+                    ip += 1; // One byte op, no operands
+                    self.pop();
                 }
             }
         }

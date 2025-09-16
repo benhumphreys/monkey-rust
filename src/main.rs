@@ -67,7 +67,7 @@ fn repl() {
 
             let mut vm = Vm::new(&comp.bytecode());
             vm.run();
-            let stack_top = vm.stack_top();
+            let stack_top = vm.last_popped_stack_elem();
             println!("{}", stack_top);
         } else {
             break;

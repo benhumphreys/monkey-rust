@@ -8,7 +8,8 @@ pub type Instructions = Vec<u8>;
 #[repr(u8)]
 pub enum Opcode {
     OpConstant = 0,
-    OpAdd = 1,
+    OpAdd,
+    OpPop
 }
 
 impl Opcode {
@@ -16,6 +17,7 @@ impl Opcode {
         match ordinal {
             0 => Ok(OpConstant),
             1 => Ok(OpAdd),
+            2 => Ok(Opcode::OpPop),
             _ => Err(format!("ERROR: no definition for opcode: {}", ordinal)),
         }
     }
@@ -24,6 +26,7 @@ impl Opcode {
         match self {
             OpConstant => vec![2],
             OpAdd => vec![],
+            Opcode::OpPop => vec![]
         }
     }
 }
@@ -33,6 +36,7 @@ impl fmt::Display for Opcode {
         match self {
             OpConstant => write!(f, "OpConstant"),
             OpAdd => write!(f, "OpAdd"),
+            Opcode::OpPop => write!(f, "OpPop"),
         }
     }
 }

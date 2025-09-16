@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 
 use monkey::ast::Program;
-use monkey::code::Opcode::{OpAdd, OpConstant};
+use monkey::code::Opcode::{OpAdd, OpConstant, OpPop};
 use monkey::code::{disassemble, make, Instructions};
 use monkey::compiler::Compiler;
 use monkey::lexer::Lexer;
@@ -20,7 +20,7 @@ struct CompilerTestCase {
 }
 
 #[test]
-fn test_integer_arithmatic() {
+fn test_integer_arithmetic() {
     let test_case = vec![
         CompilerTestCase {
             input: String::from("1 + 2"),
@@ -29,8 +29,20 @@ fn test_integer_arithmatic() {
                 make(OpConstant, vec![0]),
                 make(OpConstant, vec![1]),
                 make(OpAdd, vec![]),
+                make(OpPop, vec![]),
             ],
-        }];
+        },
+        CompilerTestCase {
+            input: String::from("1; 2"),
+            expected_constants: vec![Value::Integer(1), Value::Integer(2)],
+            expected_instructions: vec![
+                make(OpConstant, vec![0]),
+                make(OpPop, vec![]),
+                make(OpConstant, vec![1]),
+                make(OpPop, vec![]),
+            ],
+        }
+    ];
 
     run_compiler_test(test_case)
 }

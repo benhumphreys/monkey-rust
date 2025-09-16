@@ -32,7 +32,11 @@ impl Compiler {
         match stmt {
             Statement::LetStatement(_, _, _) => {todo!()}
             Statement::ReturnStatement(_, _) => {todo!()}
-            Statement::ExpressionStatement(_, expression) =>  self.compile_expression(expression),
+            Statement::ExpressionStatement(_, expression) => {
+                self.compile_expression(expression)?;
+                self.emit(Opcode::OpPop, vec![]);
+                Ok(())
+            },
             Statement::BlockStatement(_, _) => {todo!()}
         }
     }

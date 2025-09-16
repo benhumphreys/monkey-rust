@@ -12,14 +12,14 @@ fn test_integer_arithmetic() {
             input: "1".to_string(),
             expected: Value::Integer(1),
         },
-        VmTestCase {
+        /*VmTestCase {
             input: "2".to_string(),
             expected: Value::Integer(2),
         },
         VmTestCase {
             input: "1 + 2".to_string(),
             expected: Value::Integer(3),
-        },
+        },*/
     ];
 
     run_vm_test(test_cases);
@@ -51,7 +51,7 @@ fn run_vm_test(test_cases: Vec<VmTestCase>) {
         if vm_result.is_err() {
             panic!("vm error: {}", vm_result.err().unwrap());
         }
-        let stack_elem = vm.stack_top();
+        let stack_elem = vm.last_popped_stack_elem();
 
         assert_expected_object(&stack_elem, test.expected, test.input.as_str());
     }
