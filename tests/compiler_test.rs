@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 
 use monkey::ast::Program;
-use monkey::code::Opcode::{OpAdd, OpConstant, OpDiv, OpMul, OpPop, OpSub};
+use monkey::code::Opcode::{OpAdd, OpConstant, OpDiv, OpEqual, OpFalse, OpGreaterThan, OpMul, OpNotEqual, OpPop, OpSub, OpTrue};
 use monkey::code::{disassemble, make, Instructions};
 use monkey::compiler::Compiler;
 use monkey::lexer::Lexer;
@@ -77,9 +77,93 @@ fn test_integer_arithmetic() {
     run_compiler_test(test_case)
 }
 
+#[test]
+fn test_boolean_expressions() {
+    let test_cases = vec![
+        CompilerTestCase {
+            input: String::from("true"),
+            expected_constants: vec![],
+            expected_instructions: vec![
+                make(OpTrue, vec![]),
+                make(OpPop, vec![]),
+            ],
+        },
+        CompilerTestCase {
+            input: String::from("false"),
+            expected_constants: vec![],
+            expected_instructions: vec![
+                make(OpFalse, vec![]),
+                make(OpPop, vec![]),
+            ]
+        },
+        CompilerTestCase {
+            input: String::from("1 > 2"),
+            expected_constants: vec![Value::Integer(1), Value::Integer(2)],
+            expected_instructions: vec![
+                make(OpConstant, vec![0]),
+                make(OpConstant, vec![1]),
+                make(OpGreaterThan, vec![]),
+                make(OpPop, vec![]),
+            ]
+        },
+        CompilerTestCase {
+            input: String::from("1 < 2"),
+            expected_constants: vec![Value::Integer(2), Value::Integer(1)],
+            expected_instructions: vec![
+                make(OpConstant, vec![0]),
+                make(OpConstant, vec![1]),
+                make(OpGreaterThan, vec![]),
+                make(OpPop, vec![]),
+            ]
+        },
+        CompilerTestCase {
+            input: String::from("1 == 2"),
+            expected_constants: vec![Value::Integer(1), Value::Integer(2)],
+            expected_instructions: vec![
+                make(OpConstant, vec![0]),
+                make(OpConstant, vec![1]),
+                make(OpEqual, vec![]),
+                make(OpPop, vec![]),
+            ]
+        },
+        CompilerTestCase {
+            input: String::from("1 != 2"),
+            expected_constants: vec![Value::Integer(1), Value::Integer(2)],
+            expected_instructions: vec![
+                make(OpConstant, vec![0]),
+                make(OpConstant, vec![1]),
+                make(OpNotEqual, vec![]),
+                make(OpPop, vec![]),
+            ]
+        },
+        CompilerTestCase {
+            input: String::from("true == false"),
+            expected_constants: vec![],
+            expected_instructions: vec![
+                make(OpTrue, vec![]),
+                make(OpFalse, vec![]),
+                make(OpEqual, vec![]),
+                make(OpPop, vec![]),
+            ]
+        },
+        CompilerTestCase {
+            input: String::from("true != false"),
+            expected_constants: vec![],
+            expected_instructions: vec![
+                make(OpTrue, vec![]),
+                make(OpFalse, vec![]),
+                make(OpNotEqual, vec![]),
+                make(OpPop, vec![]),
+            ]
+        }
+    ];
+
+    run_compiler_test(test_cases);
+}
+
 fn run_compiler_test(test_cases: Vec<CompilerTestCase>) {
     for test in test_cases {
-        let program = parse(test.input);
+        let program = parse(&test.input);
 
         let mut compiler = Compiler::new();
         let result = compiler.compile(&program);
@@ -89,20 +173,20 @@ fn run_compiler_test(test_cases: Vec<CompilerTestCase>) {
 
         let bytecode = compiler.bytecode();
 
-        assert_instructions(bytecode.instructions, test.expected_instructions);
+        assert_instructions(bytecode.instructions, test.expected_instructions, test.input.as_str());
         assert_constants(bytecode.constants, test.expected_constants);
     }
 }
 
-fn assert_instructions(actual: Instructions, expected: Vec<Instructions>) {
+fn assert_instructions(actual: Instructions, expected: Vec<Instructions>, test_case: &str) {
     let concatenated = concat_instructions(expected);
 
-    assert_eq!(actual.len(), concatenated.len(), "wrong instruction length.\nwant={}\ngot={}",
-               disassemble(&concatenated), disassemble(&actual));
+    assert_eq!(actual.len(), concatenated.len(), "wrong instruction length.\nwant={}\ngot={}\ntest_case={}",
+               disassemble(&concatenated), disassemble(&actual), test_case);
 
     for i in 0..actual.len() {
-        assert_eq!(actual[i], concatenated[i], "wrong instruction at {}.\nwant={}\ngot={}",
-                   i, disassemble(&concatenated), disassemble(&actual));
+        assert_eq!(actual[i], concatenated[i], "wrong instruction at {}.\nwant={}\ngot={}\ntest_case={}",
+                   i, disassemble(&concatenated), disassemble(&actual), test_case);
     }
 }
 
@@ -134,8 +218,8 @@ fn concat_instructions(s: Vec<Instructions>) -> Instructions {
     out
 }
 
-fn parse(input: String) -> Program {
-    let mut lexer = Lexer::new(input);
+fn parse(input: &String) -> Program {
+    let mut lexer = Lexer::new(input.clone());
     let mut parser = Parser::new(&mut lexer);
     parser.parse_program()
 }

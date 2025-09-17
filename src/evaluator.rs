@@ -3,7 +3,7 @@
 use crate::ast::{BlockStatement, Expression, Identifier, Program, Statement};
 use crate::builtins::builtins;
 use crate::environment::Environment;
-use crate::object::{IsHashable, Object, ObjectType, OBJECT_BOOLEAN_FALSE, OBJECT_BOOLEAN_TRUE, OBJECT_NULL};
+use crate::object::{native_bool_to_bool_object, IsHashable, Object, ObjectType, OBJECT_BOOLEAN_FALSE, OBJECT_BOOLEAN_TRUE, OBJECT_NULL};
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
@@ -284,9 +284,9 @@ fn eval_infix_expression(operator: &str, left: &Object, right: &Object) -> Objec
         },
         (_, _) => {
             if operator == "==" {
-                Object::Boolean(left == right)
+                native_bool_to_bool_object(left == right)
             } else if operator == "!=" {
-                Object::Boolean(left != right)
+                native_bool_to_bool_object(left != right)
             } else if left.object_type() != right.object_type() {
                 Object::Error(format!("type mismatch: {} {} {}", left.object_type(), operator, right.object_type()))
             } else {
@@ -310,10 +310,10 @@ fn eval_integer_infix_expression(operator: &str, left: i64, right: i64) -> Objec
         "-" => Object::Integer(left - right),
         "*" => Object::Integer(left * right),
         "/" => Object::Integer(left / right),
-        "<" => Object::Boolean(left < right),
-        ">" => Object::Boolean(left > right),
-        "==" => Object::Boolean(left == right),
-        "!=" => Object::Boolean(left != right),
+        "<" => native_bool_to_bool_object(left < right),
+        ">" => native_bool_to_bool_object(left > right),
+        "==" => native_bool_to_bool_object(left == right),
+        "!=" => native_bool_to_bool_object(left != right),
         _ => Object::Error(format!("unknown operator: {} {} {}", "INTEGER", operator, "INTEGER"))
     }
 }

@@ -22,15 +22,43 @@ fn test_integer_arithmetic() {
         ("5 * (2 + 10)", Value::Integer(60)),
     ];
 
-    run_vm_test(test_cases.to_vec());
+    run_vm_test(&test_cases);
+}
+
+#[test]
+fn test_boolean_expressions() {
+    let test_cases = [
+        ("true", Value::Boolean(true)),
+        ("false", Value::Boolean(false)),
+        ("1 < 2", Value::Boolean(true)),
+        ("1 > 2", Value::Boolean(false)),
+        ("1 < 1", Value::Boolean(false)),
+        ("1 > 1", Value::Boolean(false)),
+        ("1 == 1", Value::Boolean(true)),
+        ("1 != 1", Value::Boolean(false)),
+        ("1 == 2", Value::Boolean(false)),
+        ("1 != 2", Value::Boolean(true)),
+        ("true == true", Value::Boolean(true)),
+        ("false == false", Value::Boolean(true)),
+        ("true == false", Value::Boolean(false)),
+        ("true != false", Value::Boolean(true)),
+        ("false != true", Value::Boolean(true)),
+        ("(1 < 2) == true", Value::Boolean(true)),
+        ("(1 < 2) == false", Value::Boolean(false)),
+        ("(1 > 2) == true", Value::Boolean(false)),
+        ("(1 > 2) == false", Value::Boolean(true)),
+    ];
+
+    run_vm_test(&test_cases);
 }
 
 #[derive(Debug, Clone)]
 enum Value {
     Integer(i64),
+    Boolean(bool)
 }
 
-fn run_vm_test(test_cases: Vec<(&str, Value)>) {
+fn run_vm_test(test_cases: &[(&str, Value)]) {
     for test in test_cases {
         let input = test.0.to_string();
         let expected = &test.1;
@@ -58,6 +86,7 @@ fn run_vm_test(test_cases: Vec<(&str, Value)>) {
 fn assert_expected_object(actual: &Object, expected: Value, test_input: &str) {
     match expected {
         Value::Integer(expected) => assert_integer_object(actual, expected, test_input),
+        Value::Boolean(expected) => assert_boolean_object(actual, expected, test_input)
     }
 }
 
@@ -72,5 +101,13 @@ fn assert_integer_object(actual: &Object, expected: i64, test_input: &str) {
         assert_eq!(*value, expected, "Test input: {}", test_input);
     } else {
         panic!("Object not Integer. Got={:?}. Test input: {}", actual, test_input);
+    }
+}
+
+fn assert_boolean_object(actual: &Object, expected: bool, test_input: &str) {
+    if let Object::Boolean(value) = actual {
+        assert_eq!(*value, expected, "Test input: {}", test_input);
+    } else {
+        panic!("Object not Boolean. Got={:?}. Test input: {}", actual, test_input);
     }
 }

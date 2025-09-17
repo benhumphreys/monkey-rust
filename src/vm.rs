@@ -1,6 +1,6 @@
 use crate::code::{convert_u16_to_i32_be, Instructions, Opcode};
 use crate::compiler::Bytecode;
-use crate::object::{Object, ObjectType, OBJECT_NULL};
+use crate::object::{native_bool_to_bool_object, Object, ObjectType, OBJECT_BOOLEAN_FALSE, OBJECT_BOOLEAN_TRUE, OBJECT_NULL};
 
 const STACK_SIZE: usize = 2048;
 
@@ -66,6 +66,26 @@ impl Vm {
                     ip += 1; // One byte op, no operands
                     self.pop();
                 }
+                Opcode::OpTrue => {
+                    ip += 1; // One byte op, no operands
+                    self.push(&OBJECT_BOOLEAN_TRUE)?;
+                }
+                Opcode::OpFalse => {
+                    ip += 1; // One byte op, no operands
+                    self.push(&OBJECT_BOOLEAN_FALSE)?;
+                }
+                Opcode::OpEqual => {
+                    ip += 1;
+                    self.execute_comparison(&op)?
+                }
+                Opcode::OpNotEqual => {
+                    ip += 1;
+                    self.execute_comparison(&op)?
+                }
+                Opcode::OpGreaterThan => {
+                    ip += 1;
+                    self.execute_comparison(&op)?
+                }
             }
         }
 
@@ -113,5 +133,33 @@ impl Vm {
         };
 
         self.push(&Object::Integer(result?))
+    }
+
+    fn execute_comparison(&mut self, op: &Opcode) -> VmResult {
+        let right = self.pop();
+        let left = self.pop();
+
+        match (&left, &right) {
+            (Object::Integer(left_val), Object::Integer(right_val)) => {
+                self.execute_integer_comparison(op, *left_val, *right_val)
+            },
+            (_, _) => {
+                match op {
+                    Opcode::OpEqual => self.push(&native_bool_to_bool_object(right == left)),
+                    Opcode::OpNotEqual => self.push(&native_bool_to_bool_object(right != left)),
+                    _ => Err(format!("unknown operator: {} ({} {})",
+                                     op, left.object_type(), right.object_type()))
+                }
+            }
+        }
+    }
+
+    fn execute_integer_comparison(&mut self, op: &Opcode, left: i64, right: i64) -> VmResult {
+        match op {
+            Opcode::OpEqual => self.push(&native_bool_to_bool_object(left == right)),
+            Opcode::OpNotEqual => self.push(&native_bool_to_bool_object(left != right)),
+            Opcode::OpGreaterThan => self.push(&native_bool_to_bool_object(left > right)),
+            _ => Err(format!("unknown operator: {}", op))
+        }
     }
 }

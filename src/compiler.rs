@@ -50,9 +50,24 @@ impl Compiler {
                 Ok(())
             }
             Expression::StringLiteral(_, _) => {todo!()}
-            Expression::Boolean(_, _) => {todo!()}
+            Expression::Boolean(_, value) => {
+                if *value {
+                    self.emit(Opcode::OpTrue, vec![]);
+                    Ok(())
+                } else {
+                    self.emit(Opcode::OpFalse, vec![]);
+                    Ok(())
+                }
+            }
             Expression::PrefixExpression(_, _, _) => {todo!()}
             Expression::InfixExpression(_, left, operator, right) => {
+                if operator == "<" {
+                    self.compile_expression(right)?;
+                    self.compile_expression(left)?;
+                    self.emit(Opcode::OpGreaterThan, vec![]);
+                    return Ok(())
+                }
+
                 self.compile_expression(left)?;
                 self.compile_expression(right)?;
 
@@ -64,13 +79,25 @@ impl Compiler {
                     "-" => {
                         self.emit(Opcode::OpSub, vec![]);
                         Ok(())
-                    }
+                    },
                     "*" => {
                         self.emit(Opcode::OpMul, vec![]);
                         Ok(())
-                    }
+                    },
                     "/" => {
                         self.emit(Opcode::OpDiv, vec![]);
+                        Ok(())
+                    },
+                    ">" => {
+                        self.emit(Opcode::OpGreaterThan, vec![]);
+                        Ok(())
+                    },
+                    "==" => {
+                        self.emit(Opcode::OpEqual, vec![]);
+                        Ok(())
+                    },
+                    "!=" => {
+                        self.emit(Opcode::OpNotEqual, vec![]);
                         Ok(())
                     }
                     &_ => Err(format!("unknown operator: {}", operator))

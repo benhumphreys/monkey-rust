@@ -137,3 +137,7 @@ impl Hash for Object {
         }
     }
 }
+
+pub fn native_bool_to_bool_object(value: bool) -> Object {
+    if value { OBJECT_BOOLEAN_TRUE } else { OBJECT_BOOLEAN_FALSE }
+}
