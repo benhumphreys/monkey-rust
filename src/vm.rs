@@ -86,6 +86,14 @@ impl Vm {
                     ip += 1;
                     self.execute_comparison(&op)?
                 }
+                Opcode::OpMinus => {
+                    ip += 1;
+                    self.execute_minus_operator()?
+                }
+                Opcode::OpBang => {
+                    ip += 1;
+                    self.execute_bang_operator()?
+                }
             }
         }
 
@@ -160,6 +168,30 @@ impl Vm {
             Opcode::OpNotEqual => self.push(&native_bool_to_bool_object(left != right)),
             Opcode::OpGreaterThan => self.push(&native_bool_to_bool_object(left > right)),
             _ => Err(format!("unknown operator: {}", op))
+        }
+    }
+
+    fn execute_bang_operator(&mut self) -> VmResult {
+        let operand = self.pop();
+
+        match operand {
+            Object::Boolean(value) => {
+                match value {
+                    true => self.push(&OBJECT_BOOLEAN_FALSE),
+                    false => self.push(&OBJECT_BOOLEAN_TRUE)
+                }
+            }
+            _ => self.push(&OBJECT_BOOLEAN_FALSE)
+        }
+    }
+
+    fn execute_minus_operator(&mut self) -> VmResult {
+        let operand = self.pop();
+
+        if let Object::Integer(value) = operand {
+            self.push(&Object::Integer(-value))
+        } else {
+            Err(format!("unsupported type for negation: {}", operand.object_type()))
         }
     }
 }

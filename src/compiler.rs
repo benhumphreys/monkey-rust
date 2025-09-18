@@ -59,7 +59,21 @@ impl Compiler {
                     Ok(())
                 }
             }
-            Expression::PrefixExpression(_, _, _) => {todo!()}
+            Expression::PrefixExpression(_, operator, right) => {
+                self.compile_expression(right)?;
+
+                match operator.as_str() {
+                    "!" => {
+                        self.emit(Opcode::OpBang, vec![]);
+                        Ok(())
+                    },
+                    "-" => {
+                        self.emit(Opcode::OpMinus, vec![]);
+                        Ok(())
+                    },
+                    &_ => Err(format!("unknown operator: {}", operator))
+                }
+            }
             Expression::InfixExpression(_, left, operator, right) => {
                 if operator == "<" {
                     self.compile_expression(right)?;

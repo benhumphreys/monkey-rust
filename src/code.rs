@@ -1,4 +1,4 @@
-use crate::code::Opcode::{OpAdd, OpConstant, OpDiv, OpEqual, OpFalse, OpGreaterThan, OpMul, OpNotEqual, OpPop, OpSub, OpTrue};
+use crate::code::Opcode::{OpAdd, OpBang, OpConstant, OpDiv, OpEqual, OpFalse, OpGreaterThan, OpMinus, OpMul, OpNotEqual, OpPop, OpSub, OpTrue};
 use std::fmt;
 use std::fmt::Write;
 
@@ -18,6 +18,8 @@ pub enum Opcode {
     OpEqual,
     OpNotEqual,
     OpGreaterThan,
+    OpMinus,
+    OpBang,
 }
 
 impl Opcode {
@@ -34,6 +36,8 @@ impl Opcode {
             8 => Ok(OpEqual),
             9 => Ok(OpNotEqual),
             10 => Ok(OpGreaterThan),
+            11 => Ok(OpMinus),
+            12 => Ok(OpBang),
             _ => Err(format!("ERROR: no definition for opcode: {}", ordinal)),
         }
     }
@@ -51,6 +55,8 @@ impl Opcode {
             OpEqual => vec![],
             OpNotEqual => vec![],
             OpGreaterThan => vec![],
+            OpMinus => vec![],
+            OpBang => vec![],
         }
     }
 }
@@ -69,6 +75,8 @@ impl fmt::Display for Opcode {
             OpEqual => write!(f, "OpEqual"),
             OpNotEqual => write!(f, "OpNotEqual"),
             OpGreaterThan => write!(f, "OpGreaterThan"),
+            OpMinus => write!(f, "OpMinus"),
+            OpBang => write!(f, "OpBang"),
         }
     }
 }

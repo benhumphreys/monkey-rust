@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 
 use monkey::ast::Program;
-use monkey::code::Opcode::{OpAdd, OpConstant, OpDiv, OpEqual, OpFalse, OpGreaterThan, OpMul, OpNotEqual, OpPop, OpSub, OpTrue};
+use monkey::code::Opcode::{OpAdd, OpBang, OpConstant, OpDiv, OpEqual, OpFalse, OpGreaterThan, OpMinus, OpMul, OpNotEqual, OpPop, OpSub, OpTrue};
 use monkey::code::{disassemble, make, Instructions};
 use monkey::compiler::Compiler;
 use monkey::lexer::Lexer;
@@ -72,6 +72,15 @@ fn test_integer_arithmetic() {
                 make(OpPop, vec![]),
             ],
         },
+        CompilerTestCase {
+            input: String::from("-1"),
+            expected_constants: vec![Value::Integer(1)],
+            expected_instructions: vec![
+                make(OpConstant, vec![0]),
+                make(OpMinus, vec![]),
+                make(OpPop, vec![]),
+            ],
+        }
     ];
 
     run_compiler_test(test_case)
@@ -153,6 +162,15 @@ fn test_boolean_expressions() {
                 make(OpTrue, vec![]),
                 make(OpFalse, vec![]),
                 make(OpNotEqual, vec![]),
+                make(OpPop, vec![]),
+            ]
+        },
+        CompilerTestCase {
+            input: String::from("!true"),
+            expected_constants: vec![],
+            expected_instructions: vec![
+                make(OpTrue, vec![]),
+                make(OpBang, vec![]),
                 make(OpPop, vec![]),
             ]
         }
