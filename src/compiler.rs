@@ -1,6 +1,7 @@
 #![allow(dead_code)]
 
-use crate::ast::{Expression, Program, Statement};
+use std::ops::Deref;
+use crate::ast::{BlockStatement, Expression, Program, Statement};
 use crate::code::{make, Instructions, Opcode};
 use crate::code::Opcode::OpConstant;
 use crate::object::Object;
@@ -10,14 +11,18 @@ pub type CompilerResult<T = ()> = Result<T, String>;
 
 pub struct Compiler {
     instructions: Instructions,
-    constants: Vec<Object>
+    constants: Vec<Object>,
+    last_instruction: EmittedInstruction,
+    previous_instruction: EmittedInstruction
 }
 
 impl Compiler {
     pub fn new() -> Self {
         Compiler {
             instructions: Instructions::new(),
-            constants: Vec::new()
+            constants: Vec::new(),
+            last_instruction: EmittedInstruction::new(),
+            previous_instruction: EmittedInstruction::new()
         }
     }
 
@@ -37,7 +42,12 @@ impl Compiler {
                 self.emit(Opcode::OpPop, vec![]);
                 Ok(())
             },
-            Statement::BlockStatement(_, _) => {todo!()}
+            Statement::BlockStatement(_, statements) => {
+                for stmt in statements {
+                    self.compile_statement(stmt)?;
+                }
+                Ok(())
+            }
         }
     }
 
@@ -117,7 +127,39 @@ impl Compiler {
                     &_ => Err(format!("unknown operator: {}", operator))
                 }
             }
-            Expression::IfExpression(_, _, _, _) => {todo!()}
+            Expression::IfExpression(_, condition, consequence, alternative) => {
+                self.compile_expression(condition.deref())?;
+
+                // Emit an OpJumpNotTruthy with a bogus jump offset, to be patched later
+                let jump_not_truthy_pos = self.emit(Opcode::OpJumpNotTruthy, vec![9999]) as usize;
+
+                self.compile_block_statement(consequence)?;
+
+                // If expressions are indeed expressions, therefore need to leave the last value on the stack
+                if self.last_instruction_is_pop() {
+                    self.remove_last_pop();
+                }
+
+                if let Some(alternative) = alternative {
+                    // Emit jump with a bogus jump offset, to be patched later
+                    let jump_pos = self.emit(Opcode::OpJump, vec![9999]);
+                    let after_consequence_pos = self.instructions.len() as i32;
+                    self.change_operand(jump_not_truthy_pos, after_consequence_pos);
+
+                    self.compile_block_statement(alternative)?;
+                    if self.last_instruction_is_pop() {
+                        self.remove_last_pop();
+                    }
+
+                    let after_alternative_pos = self.instructions.len() as i32;
+                    self.change_operand(jump_pos, after_alternative_pos);
+                } else {
+                    let after_consequence_pos = self.instructions.len() as i32;
+                    self.change_operand(jump_not_truthy_pos, after_consequence_pos);
+                }
+
+                Ok(())
+            }
             Expression::FunctionLiteral(_, _, _) => {todo!()}
             Expression::CallExpression(_, _, _) => {todo!()}
             Expression::ArrayLiteral(_, _) => {todo!()}
@@ -138,20 +180,73 @@ impl Compiler {
         self.constants.len() as i32 - 1
     }
 
-    fn emit(&mut self, op: Opcode, operands: Vec<i32>) -> i32 {
+    fn emit(&mut self, op: Opcode, operands: Vec<i32>) -> usize {
         let ins = make(op, operands);
         let pos = self.add_instruction(&ins);
+
+        self.set_last_instruction(op, pos);
         pos
     }
 
-    fn add_instruction(&mut self, ins: &Vec<u8>) -> i32 {
+    fn add_instruction(&mut self, ins: &Vec<u8>) -> usize {
         let pos = self.instructions.len();
         self.instructions.extend(ins);
-        pos as i32
+        pos
+    }
+
+    fn compile_block_statement(&mut self, block: &BlockStatement) -> CompilerResult {
+        for stmt in &block.statements {
+            self.compile_statement(stmt)?;
+        }
+        Ok(())
+    }
+
+    fn set_last_instruction(&mut self, op: Opcode, pos: usize) {
+        let previous = self.last_instruction.clone();
+        let last = EmittedInstruction{opcode: op, pos: pos};
+
+        self.previous_instruction = previous;
+        self.last_instruction = last;
+    }
+
+    fn last_instruction_is_pop(&self) -> bool {
+        self.last_instruction.opcode == Opcode::OpPop
+    }
+
+    fn remove_last_pop(&mut self) {
+        self.instructions.pop();
+        self.last_instruction = self.previous_instruction.clone();
+    }
+
+    fn replace_instruction(&mut self, pos: usize, new_instruction: &[u8]) {
+        for i in 0..new_instruction.len() {
+            self.instructions[pos + i] = new_instruction[i];
+        }
+    }
+
+    fn change_operand(&mut self, op_pos: usize, operand: i32) {
+        let op = Opcode::from_ordinal(self.instructions[op_pos]).unwrap();
+        let new_instruction = make(op, vec![operand]);
+        self.replace_instruction(op_pos, &new_instruction);
     }
 }
 
 pub struct Bytecode {
     pub instructions: Instructions,
     pub constants: Vec<Object>
+}
+
+#[derive(Clone)]
+struct EmittedInstruction {
+    opcode: Opcode,
+    pos: usize,
+}
+
+impl EmittedInstruction {
+    fn new() -> Self {
+        EmittedInstruction {
+            opcode: OpConstant,
+            pos: 0,
+        }
+    }
 }

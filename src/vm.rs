@@ -94,6 +94,8 @@ impl Vm {
                     ip += 1;
                     self.execute_bang_operator()?
                 }
+                Opcode::OpJumpNotTruthy => {}
+                Opcode::OpJump => {}
             }
         }
 

@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 
 use monkey::ast::Program;
-use monkey::code::Opcode::{OpAdd, OpBang, OpConstant, OpDiv, OpEqual, OpFalse, OpGreaterThan, OpMinus, OpMul, OpNotEqual, OpPop, OpSub, OpTrue};
+use monkey::code::Opcode::{OpAdd, OpBang, OpConstant, OpDiv, OpEqual, OpFalse, OpGreaterThan, OpJump, OpJumpNotTruthy, OpMinus, OpMul, OpNotEqual, OpPop, OpSub, OpTrue};
 use monkey::code::{disassemble, make, Instructions};
 use monkey::compiler::Compiler;
 use monkey::lexer::Lexer;
@@ -171,6 +171,54 @@ fn test_boolean_expressions() {
             expected_instructions: vec![
                 make(OpTrue, vec![]),
                 make(OpBang, vec![]),
+                make(OpPop, vec![]),
+            ]
+        }
+    ];
+
+    run_compiler_test(test_cases);
+}
+
+#[test]
+fn test_conditionals() {
+    let test_cases = vec![
+        CompilerTestCase {
+            input: String::from("if (true) { 10 }; 3333;"),
+            expected_constants: vec![Value::Integer(10), Value::Integer(3333)],
+            expected_instructions: vec![
+                // 0000
+                make(OpTrue, vec![]),
+                // 0001
+                make(OpJumpNotTruthy, vec![7]),
+                // 0004
+                make(OpConstant, vec![0]),
+                // 0007
+                make(OpPop, vec![]),
+                // 0008
+                make(OpConstant, vec![1]),
+                // 0011
+                make(OpPop, vec![]),
+            ]
+        },
+        CompilerTestCase {
+            input: String::from("if (true) { 10 } else { 20 }; 3333"),
+            expected_constants: vec![Value::Integer(10), Value::Integer(20), Value::Integer(3333)],
+            expected_instructions: vec![
+                // 0000
+                make(OpTrue, vec![]),
+                // 0001
+                make(OpJumpNotTruthy, vec![10]),
+                // 0004
+                make(OpConstant, vec![0]),
+                // 0007
+                make(OpJump, vec![13]),
+                // 0010
+                make(OpConstant, vec![1]),
+                // 0013
+                make(OpPop, vec![]),
+                // 0014
+                make(OpConstant, vec![2]),
+                // 0017
                 make(OpPop, vec![]),
             ]
         }
