@@ -94,8 +94,19 @@ impl Vm {
                     ip += 1;
                     self.execute_bang_operator()?
                 }
-                Opcode::OpJumpNotTruthy => {}
-                Opcode::OpJump => {}
+                Opcode::OpJumpNotTruthy => {
+                    let condition = self.pop();
+                    if is_truthy(&condition) {
+                        ip += 3; // One byte op, plus two u8 operands
+                    } else {
+                        let pos = convert_u16_to_i32_be(&self.instructions[ip + 1..]) as usize;
+                        ip = pos;
+                    }
+                }
+                Opcode::OpJump => {
+                    let pos = convert_u16_to_i32_be(&self.instructions[ip + 1..]) as usize;
+                    ip = pos;
+                }
             }
         }
 
@@ -195,5 +206,13 @@ impl Vm {
         } else {
             Err(format!("unsupported type for negation: {}", operand.object_type()))
         }
+    }
+}
+
+fn is_truthy(object: &Object) -> bool {
+    match object {
+        Object::Boolean(value) => *value,
+        Object::Null => false,
+        _ => true
     }
 }

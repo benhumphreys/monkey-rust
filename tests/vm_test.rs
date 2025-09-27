@@ -62,6 +62,21 @@ fn test_boolean_expressions() {
     run_vm_test(&test_cases);
 }
 
+#[test]
+fn test_conditionals() {
+    let test_cases = [
+        ("if (true) { 10 }", Value::Integer(10)),
+        ("if (true) { 10 } else { 20 }", Value::Integer(10)),
+        ("if (false) { 10 } else { 20 } ", Value::Integer(20)),
+        ("if (1) { 10 }", Value::Integer(10)),
+        ("if (1 < 2) { 10 }", Value::Integer(10)),
+        ("if (1 < 2) { 10 } else { 20 }", Value::Integer(10)),
+        ("if (1 > 2) { 10 } else { 20 }", Value::Integer(20)),
+    ];
+
+    run_vm_test(&test_cases);
+}
+
 #[derive(Debug, Clone)]
 enum Value {
     Integer(i64),
