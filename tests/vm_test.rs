@@ -1,7 +1,7 @@
 use monkey::ast::Program;
 use monkey::compiler::Compiler;
 use monkey::lexer::Lexer;
-use monkey::object::Object;
+use monkey::object::{Object, ObjectType};
 use monkey::parser::Parser;
 use monkey::vm::Vm;
 
@@ -57,6 +57,7 @@ fn test_boolean_expressions() {
         ("!!true", Value::Boolean(true)),
         ("!!false", Value::Boolean(false)),
         ("!!5", Value::Boolean(true)),
+        ("!(if (false) { 5; })", Value::Boolean(true))
     ];
 
     run_vm_test(&test_cases);
@@ -72,6 +73,9 @@ fn test_conditionals() {
         ("if (1 < 2) { 10 }", Value::Integer(10)),
         ("if (1 < 2) { 10 } else { 20 }", Value::Integer(10)),
         ("if (1 > 2) { 10 } else { 20 }", Value::Integer(20)),
+        ("if (1 > 2) { 10 }", Value::Null),
+        ("if (false) { 10 }", Value::Null),
+        ("if ((if (false) { 10 })) { 10 } else { 20 }", Value::Integer(20)),
     ];
 
     run_vm_test(&test_cases);
@@ -80,7 +84,8 @@ fn test_conditionals() {
 #[derive(Debug, Clone)]
 enum Value {
     Integer(i64),
-    Boolean(bool)
+    Boolean(bool),
+    Null
 }
 
 fn run_vm_test(test_cases: &[(&str, Value)]) {
@@ -111,7 +116,8 @@ fn run_vm_test(test_cases: &[(&str, Value)]) {
 fn assert_expected_object(actual: &Object, expected: Value, test_input: &str) {
     match expected {
         Value::Integer(expected) => assert_integer_object(actual, expected, test_input),
-        Value::Boolean(expected) => assert_boolean_object(actual, expected, test_input)
+        Value::Boolean(expected) => assert_boolean_object(actual, expected, test_input),
+        Value::Null => assert_null_object(actual)
     }
 }
 
@@ -135,4 +141,8 @@ fn assert_boolean_object(actual: &Object, expected: bool, test_input: &str) {
     } else {
         panic!("Object not Boolean. Got={:?}. Test input: {}", actual, test_input);
     }
+}
+
+fn assert_null_object(object: &Object) {
+    assert!(matches!(object, Object::Null), "Expected Null object, x Got: {:?}", object.object_type());
 }

@@ -1,11 +1,11 @@
 #![allow(dead_code)]
 
-use std::ops::Deref;
 use crate::ast::{BlockStatement, Expression, Program, Statement};
-use crate::code::{make, Instructions, Opcode};
 use crate::code::Opcode::OpConstant;
+use crate::code::{make, Instructions, Opcode};
 use crate::object::Object;
 use crate::object::Object::Integer;
+use std::ops::Deref;
 
 pub type CompilerResult<T = ()> = Result<T, String>;
 
@@ -131,7 +131,7 @@ impl Compiler {
                 self.compile_expression(condition.deref())?;
 
                 // Emit an OpJumpNotTruthy with a bogus jump offset, to be patched later
-                let jump_not_truthy_pos = self.emit(Opcode::OpJumpNotTruthy, vec![9999]) as usize;
+                let jump_not_truthy_pos = self.emit(Opcode::OpJumpNotTruthy, vec![9999]);
 
                 self.compile_block_statement(consequence)?;
 
@@ -140,23 +140,23 @@ impl Compiler {
                     self.remove_last_pop();
                 }
 
-                if let Some(alternative) = alternative {
-                    // Emit jump with a bogus jump offset, to be patched later
-                    let jump_pos = self.emit(Opcode::OpJump, vec![9999]);
-                    let after_consequence_pos = self.instructions.len() as i32;
-                    self.change_operand(jump_not_truthy_pos, after_consequence_pos);
+                // Emit an OpJump with a bogus jump offset, to be patched later
+                let jump_pos = self.emit(Opcode::OpJump, vec![9999]);
 
+                let after_consequence_pos = self.instructions.len() as i32;
+                self.change_operand(jump_not_truthy_pos, after_consequence_pos);
+
+                if let Some(alternative) = alternative {
                     self.compile_block_statement(alternative)?;
                     if self.last_instruction_is_pop() {
                         self.remove_last_pop();
                     }
-
-                    let after_alternative_pos = self.instructions.len() as i32;
-                    self.change_operand(jump_pos, after_alternative_pos);
                 } else {
-                    let after_consequence_pos = self.instructions.len() as i32;
-                    self.change_operand(jump_not_truthy_pos, after_consequence_pos);
+                    self.emit(Opcode::OpNull, vec![]) ;
                 }
+
+                let after_alternative_pos = self.instructions.len() as i32;
+                self.change_operand(jump_pos, after_alternative_pos);
 
                 Ok(())
             }

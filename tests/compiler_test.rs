@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 
 use monkey::ast::Program;
-use monkey::code::Opcode::{OpAdd, OpBang, OpConstant, OpDiv, OpEqual, OpFalse, OpGreaterThan, OpJump, OpJumpNotTruthy, OpMinus, OpMul, OpNotEqual, OpPop, OpSub, OpTrue};
+use monkey::code::Opcode::{OpAdd, OpBang, OpConstant, OpDiv, OpEqual, OpFalse, OpGreaterThan, OpJump, OpJumpNotTruthy, OpMinus, OpMul, OpNotEqual, OpNull, OpPop, OpSub, OpTrue};
 use monkey::code::{disassemble, make, Instructions};
 use monkey::compiler::Compiler;
 use monkey::lexer::Lexer;
@@ -189,14 +189,18 @@ fn test_conditionals() {
                 // 0000
                 make(OpTrue, vec![]),
                 // 0001
-                make(OpJumpNotTruthy, vec![7]),
+                make(OpJumpNotTruthy, vec![10]),
                 // 0004
                 make(OpConstant, vec![0]),
                 // 0007
-                make(OpPop, vec![]),
-                // 0008
-                make(OpConstant, vec![1]),
+                make(OpJump, vec![11]),
+                // 0010
+                make(OpNull, vec![]),
                 // 0011
+                make(OpPop, vec![]),
+                // 0012
+                make(OpConstant, vec![1]),
+                // 0015
                 make(OpPop, vec![]),
             ]
         },

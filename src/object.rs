@@ -72,7 +72,7 @@ impl Display for Object {
             }
             Object::Builtin(_) => {write!(f, "builtin function")},
             Object::Error(value) => write!(f, "error: {}", value),
-            Object::Null =>  write!(f, "Null"),
+            Object::Null =>  write!(f, "null"),
         }
     }
 }

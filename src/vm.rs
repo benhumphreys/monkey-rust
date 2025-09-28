@@ -107,6 +107,10 @@ impl Vm {
                     let pos = convert_u16_to_i32_be(&self.instructions[ip + 1..]) as usize;
                     ip = pos;
                 }
+                Opcode::OpNull => {
+                    self.push(&OBJECT_NULL)?;
+                    ip += 1;
+                }
             }
         }
 
@@ -193,6 +197,9 @@ impl Vm {
                     true => self.push(&OBJECT_BOOLEAN_FALSE),
                     false => self.push(&OBJECT_BOOLEAN_TRUE)
                 }
+            }
+            Object::Null => {
+                self.push(&OBJECT_BOOLEAN_TRUE)
             }
             _ => self.push(&OBJECT_BOOLEAN_FALSE)
         }

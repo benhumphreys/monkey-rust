@@ -1,4 +1,4 @@
-use crate::code::Opcode::{OpAdd, OpBang, OpConstant, OpDiv, OpEqual, OpFalse, OpGreaterThan, OpJump, OpJumpNotTruthy, OpMinus, OpMul, OpNotEqual, OpPop, OpSub, OpTrue};
+use crate::code::Opcode::{OpAdd, OpBang, OpConstant, OpDiv, OpEqual, OpFalse, OpGreaterThan, OpJump, OpJumpNotTruthy, OpMinus, OpMul, OpNotEqual, OpNull, OpPop, OpSub, OpTrue};
 use std::fmt;
 use std::fmt::Write;
 
@@ -21,7 +21,8 @@ pub enum Opcode {
     OpMinus,
     OpBang,
     OpJumpNotTruthy,
-    OpJump
+    OpJump,
+    OpNull
 }
 
 impl Opcode {
@@ -42,6 +43,7 @@ impl Opcode {
             12 => Ok(OpBang),
             13 => Ok(OpJumpNotTruthy),
             14 => Ok(OpJump),
+            15 => Ok(OpNull),
             _ => Err(format!("ERROR: no definition for opcode: {}", ordinal)),
         }
     }
@@ -62,7 +64,8 @@ impl Opcode {
             OpMinus => vec![],
             OpBang => vec![],
             OpJumpNotTruthy => vec![2],
-            OpJump => vec![2]
+            OpJump => vec![2],
+            OpNull => vec![],
         }
     }
 }
@@ -84,7 +87,8 @@ impl fmt::Display for Opcode {
             OpMinus => write!(f, "OpMinus"),
             OpBang => write!(f, "OpBang"),
             OpJumpNotTruthy => write!(f, "OpJumpNotTruthy"),
-            OpJump => write!(f, "OpJump")
+            OpJump => write!(f, "OpJump"),
+            OpNull => write!(f, "OpNull"),
         }
     }
 }
