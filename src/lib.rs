@@ -7,5 +7,6 @@ pub mod evaluator;
 pub mod lexer;
 pub mod object;
 pub mod parser;
+pub mod symbol_table;
 pub mod token;
 pub mod vm;

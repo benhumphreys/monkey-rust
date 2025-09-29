@@ -1,10 +1,11 @@
 #![allow(dead_code)]
 
 use crate::ast::{BlockStatement, Expression, Program, Statement};
-use crate::code::Opcode::OpConstant;
+use crate::code::Opcode::{OpConstant, OpGetGlobal, OpSetGlobal};
 use crate::code::{make, Instructions, Opcode};
 use crate::object::Object;
 use crate::object::Object::Integer;
+use crate::symbol_table::SymbolTable;
 use std::ops::Deref;
 
 pub type CompilerResult<T = ()> = Result<T, String>;
@@ -13,7 +14,8 @@ pub struct Compiler {
     instructions: Instructions,
     constants: Vec<Object>,
     last_instruction: EmittedInstruction,
-    previous_instruction: EmittedInstruction
+    previous_instruction: EmittedInstruction,
+    symbol_table: SymbolTable
 }
 
 impl Compiler {
@@ -22,7 +24,8 @@ impl Compiler {
             instructions: Instructions::new(),
             constants: Vec::new(),
             last_instruction: EmittedInstruction::new(),
-            previous_instruction: EmittedInstruction::new()
+            previous_instruction: EmittedInstruction::new(),
+            symbol_table: SymbolTable::new()
         }
     }
 
@@ -35,7 +38,13 @@ impl Compiler {
 
     fn compile_statement(&mut self, stmt: &Statement) -> CompilerResult {
         match stmt {
-            Statement::LetStatement(_, _, _) => {todo!()}
+            Statement::LetStatement(_, id, expression) => {
+                self.compile_expression(expression)?;
+
+                let symbol = self.symbol_table.define(id.value.as_str());
+                self.emit(OpSetGlobal, vec![symbol.index]);
+                Ok(())
+            }
             Statement::ReturnStatement(_, _) => {todo!()}
             Statement::ExpressionStatement(_, expression) => {
                 self.compile_expression(expression)?;
@@ -53,7 +62,16 @@ impl Compiler {
 
     fn compile_expression(&mut self, expr: &Expression) -> CompilerResult {
         match expr {
-            Expression::Identifier(_, _) => {todo!()}
+            Expression::Identifier(_, value) => {
+                let maybe_symbol = self.symbol_table.resolve(value);
+                match maybe_symbol {
+                    Some(symbol) => {
+                        self.emit(OpGetGlobal, vec![symbol.index]);
+                        Ok(())
+                    }
+                    None => Err(format!("undefined variable: {}", value))
+                }
+            }
             Expression::IntegerLiteral(_, value) => {
                 let pos = self.add_constant(&Integer(*value));
                 self.emit(OpConstant, vec![pos]);

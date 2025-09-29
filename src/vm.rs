@@ -111,6 +111,8 @@ impl Vm {
                     self.push(&OBJECT_NULL)?;
                     ip += 1;
                 }
+                Opcode::OpGetGlobal => {}
+                Opcode::OpSetGlobal => {}
             }
         }
 

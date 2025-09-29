@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 
 use monkey::ast::Program;
-use monkey::code::Opcode::{OpAdd, OpBang, OpConstant, OpDiv, OpEqual, OpFalse, OpGreaterThan, OpJump, OpJumpNotTruthy, OpMinus, OpMul, OpNotEqual, OpNull, OpPop, OpSub, OpTrue};
+use monkey::code::Opcode::{OpAdd, OpBang, OpConstant, OpDiv, OpEqual, OpFalse, OpGetGlobal, OpGreaterThan, OpJump, OpJumpNotTruthy, OpMinus, OpMul, OpNotEqual, OpNull, OpPop, OpSetGlobal, OpSub, OpTrue};
 use monkey::code::{disassemble, make, Instructions};
 use monkey::compiler::Compiler;
 use monkey::lexer::Lexer;
@@ -229,6 +229,50 @@ fn test_conditionals() {
     ];
 
     run_compiler_test(test_cases);
+}
+
+#[test]
+fn test_global_let_statements() {
+    let test_cases = vec![
+        CompilerTestCase {
+            input: String::from("let one = 1;
+                                 let two = 2;"),
+            expected_constants: vec![Value::Integer(1), Value::Integer(2)],
+            expected_instructions: vec![
+                make(OpConstant, vec![0]),
+                make(OpSetGlobal, vec![0]),
+                make(OpConstant, vec![1]),
+                make(OpSetGlobal, vec![1]),
+            ]
+        },
+        CompilerTestCase {
+            input: String::from("let one = 1;
+                                 one;"),
+            expected_constants: vec![Value::Integer(1)],
+            expected_instructions: vec![
+                make(OpConstant, vec![0]),
+                make(OpSetGlobal, vec![0]),
+                make(OpGetGlobal, vec![0]),
+                make(OpPop, vec![]),
+            ]
+        },
+        CompilerTestCase {
+            input: String::from("let one = 1;
+                                 let two = one;
+                                 two;"),
+            expected_constants: vec![Value::Integer(1)],
+            expected_instructions: vec![
+                make(OpConstant, vec![0]),
+                make(OpSetGlobal, vec![0]),
+                make(OpGetGlobal, vec![0]),
+                make(OpSetGlobal, vec![1]),
+                make(OpGetGlobal, vec![1]),
+                make(OpPop, vec![]),
+            ]
+        },
+    ];
+
+    run_compiler_test(test_cases)
 }
 
 fn run_compiler_test(test_cases: Vec<CompilerTestCase>) {
