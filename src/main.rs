@@ -3,9 +3,13 @@
 use monkey::compiler::Compiler;
 use monkey::lexer::Lexer;
 use monkey::parser::{ParseError, Parser};
-use monkey::vm::Vm;
+use monkey::vm::{Vm, GLOBAL_SIZE};
 use std::io::{BufRead, Read, Write};
 use std::{env, io};
+use std::cell::RefCell;
+use std::rc::Rc;
+use monkey::object::Object;
+use monkey::symbol_table::SymbolTable;
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -43,6 +47,10 @@ fn repl() {
     let stdin = io::stdin();
     let mut lines = stdin.lock().lines();
 
+    let mut constants: Rc<RefCell<Vec<Object>>> = Rc::new(RefCell::new(vec![]));
+    let mut globals = Rc::new(RefCell::new(vec![Object::Null; GLOBAL_SIZE]));
+    let mut symbol_table = Rc::new(RefCell::new(SymbolTable::new()));
+
     println!("Monkey programming language");
     loop {
         print!(">> ");
@@ -58,14 +66,14 @@ fn repl() {
                 continue;
             }
 
-            let mut comp = Compiler::new();
+            let mut comp = Compiler::new_with_state(symbol_table.clone(), constants.clone());
             let result = comp.compile(&program);
             if result.is_err() {
                 println!("Compilation failed: {}", result.unwrap_err());
                 continue;
             }
 
-            let mut vm = Vm::new(&comp.bytecode());
+            let mut vm = Vm::new_with_globals_store(comp.bytecode(), globals.clone());
             vm.run();
             let stack_top = vm.last_popped_stack_elem();
             println!("{}", stack_top);

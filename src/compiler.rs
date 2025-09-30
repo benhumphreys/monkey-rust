@@ -1,5 +1,6 @@
 #![allow(dead_code)]
 
+use std::cell::RefCell;
 use crate::ast::{BlockStatement, Expression, Program, Statement};
 use crate::code::Opcode::{OpConstant, OpGetGlobal, OpSetGlobal};
 use crate::code::{make, Instructions, Opcode};
@@ -7,25 +8,30 @@ use crate::object::Object;
 use crate::object::Object::Integer;
 use crate::symbol_table::SymbolTable;
 use std::ops::Deref;
+use std::rc::Rc;
 
 pub type CompilerResult<T = ()> = Result<T, String>;
 
 pub struct Compiler {
     instructions: Instructions,
-    constants: Vec<Object>,
+    constants: Rc<RefCell<Vec<Object>>>,
     last_instruction: EmittedInstruction,
     previous_instruction: EmittedInstruction,
-    symbol_table: SymbolTable
+    symbol_table: Rc<RefCell<SymbolTable>>
 }
 
 impl Compiler {
     pub fn new() -> Self {
+        Self::new_with_state(Rc::new(RefCell::new(SymbolTable::new())), Rc::new(RefCell::new(Vec::new())))
+    }
+
+    pub fn new_with_state(s: Rc<RefCell<SymbolTable>>, constants: Rc<RefCell<Vec<Object>>>) -> Self {
         Compiler {
             instructions: Instructions::new(),
-            constants: Vec::new(),
+            constants: constants,
             last_instruction: EmittedInstruction::new(),
             previous_instruction: EmittedInstruction::new(),
-            symbol_table: SymbolTable::new()
+            symbol_table: s
         }
     }
 
@@ -41,7 +47,7 @@ impl Compiler {
             Statement::LetStatement(_, id, expression) => {
                 self.compile_expression(expression)?;
 
-                let symbol = self.symbol_table.define(id.value.as_str());
+                let symbol = self.symbol_table.borrow_mut().define(id.value.as_str());
                 self.emit(OpSetGlobal, vec![symbol.index]);
                 Ok(())
             }
@@ -63,7 +69,7 @@ impl Compiler {
     fn compile_expression(&mut self, expr: &Expression) -> CompilerResult {
         match expr {
             Expression::Identifier(_, value) => {
-                let maybe_symbol = self.symbol_table.resolve(value);
+                let maybe_symbol = self.symbol_table.borrow_mut().resolve(value);
                 match maybe_symbol {
                     Some(symbol) => {
                         self.emit(OpGetGlobal, vec![symbol.index]);
@@ -189,13 +195,13 @@ impl Compiler {
     pub fn bytecode(&self) -> Bytecode {
         Bytecode {
             instructions: self.instructions.clone(),
-            constants: self.constants.clone()
+            constants: self.constants.borrow().clone()
         }
     }
 
     fn add_constant(&mut self, obj: &Object) -> i32 {
-        self.constants.push(obj.clone());
-        self.constants.len() as i32 - 1
+        self.constants.borrow_mut().push(obj.clone());
+        self.constants.borrow().len() as i32 - 1
     }
 
     fn emit(&mut self, op: Opcode, operands: Vec<i32>) -> usize {

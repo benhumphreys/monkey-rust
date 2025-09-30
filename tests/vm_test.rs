@@ -81,6 +81,17 @@ fn test_conditionals() {
     run_vm_test(&test_cases);
 }
 
+#[test]
+fn test_global_let_statements() {
+    let test_cases = [
+        ("let one = 1; one", Value::Integer(1)),
+        ("let one = 1; let two = 2; one + two", Value::Integer(3)),
+        ("let one = 1; let two = one + one; one + two", Value::Integer(3)),
+    ];
+
+    run_vm_test(&test_cases);
+}
+
 #[derive(Debug, Clone)]
 enum Value {
     Integer(i64),

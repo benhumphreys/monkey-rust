@@ -46,16 +46,16 @@ fn eval_statement(stmt: &Statement, env: &mut Rc<RefCell<Environment>>) -> Objec
             Object::ReturnValue(Box::new(val))
         }
         Statement::ExpressionStatement(_, expression) => { eval_expression(expression, env)}
-        Statement::BlockStatement(token, statements) => {
-            eval_block_statement(&BlockStatement{token: token.clone(), statements: statements.clone()}, env)
+        Statement::BlockStatement(_, statements) => {
+            eval_block_statement_from_vec(statements, env)
         }
     }
 }
 
-fn eval_block_statement(block_statement: &BlockStatement, env: &mut Rc<RefCell<Environment>>) -> Object {
+fn eval_block_statement_from_vec(statements: &[Statement], env: &mut Rc<RefCell<Environment>>) -> Object {
     let mut result = OBJECT_NULL;
 
-    for stmt in &block_statement.statements {
+    for stmt in statements {
         result = eval_statement(stmt, env);
         if let Object::ReturnValue(_) = result {
             return result
@@ -65,6 +65,10 @@ fn eval_block_statement(block_statement: &BlockStatement, env: &mut Rc<RefCell<E
         }
     }
     result
+}
+
+fn eval_block_statement(block_statement: &BlockStatement, env: &mut Rc<RefCell<Environment>>) -> Object {
+    eval_block_statement_from_vec(&block_statement.statements, env)
 }
 
 fn eval_expression(expr: &Expression, env: &mut Rc<RefCell<Environment>>) -> Object {

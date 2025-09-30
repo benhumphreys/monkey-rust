@@ -1,7 +1,10 @@
+use std::cell::RefCell;
+use std::rc::Rc;
 use crate::code::{convert_u16_to_i32_be, Instructions, Opcode};
 use crate::compiler::Bytecode;
 use crate::object::{native_bool_to_bool_object, Object, ObjectType, OBJECT_BOOLEAN_FALSE, OBJECT_BOOLEAN_TRUE, OBJECT_NULL};
 
+pub const GLOBAL_SIZE: usize = 65536;
 const STACK_SIZE: usize = 2048;
 
 pub type VmResult<T = ()> = Result<T, String>;
@@ -9,6 +12,7 @@ pub type VmResult<T = ()> = Result<T, String>;
 pub struct Vm {
     constants: Vec<Object>,
     instructions: Instructions,
+    globals: Rc<RefCell<Vec<Object>>>,
 
     stack: [Object; STACK_SIZE],
     sp: i32
@@ -19,9 +23,21 @@ impl Vm {
         Self {
             constants: bytecode.constants.clone(),
             instructions: bytecode.instructions.clone(),
+            globals: Rc::new(RefCell::new(vec![Object::Null; GLOBAL_SIZE])),
             stack: [OBJECT_NULL; STACK_SIZE],
-            sp: 0 // Top of the stack is stack[sp - 1], the next free slot is stack[sp]
+            sp: 0, // Top of the stack is stack[sp - 1], the next free slot is stack[sp]
         }
+    }
+
+    pub fn new_with_globals_store(bytecode: Bytecode, globals: Rc<RefCell<Vec<Object>>>) -> Self {
+        Self {
+            constants: bytecode.constants,
+            instructions: bytecode.instructions,
+            globals: globals,
+            stack: [OBJECT_NULL; STACK_SIZE],
+            sp: 0, // Top of the stack is stack[sp - 1], the next free slot is stack[sp]
+        }
+
     }
 
     pub fn stack_top(&mut self) -> Object {
@@ -111,8 +127,20 @@ impl Vm {
                     self.push(&OBJECT_NULL)?;
                     ip += 1;
                 }
-                Opcode::OpGetGlobal => {}
-                Opcode::OpSetGlobal => {}
+                Opcode::OpGetGlobal => {
+                    let global_index = convert_u16_to_i32_be(&self.instructions[ip + 1..]) as usize;
+                    ip += 3; // One byte op, plus two u8 operands
+                    let value = {
+                        &self.globals.borrow()[global_index].clone()
+                    };
+                    self.push(value)?;
+                }
+                Opcode::OpSetGlobal => {
+                    let global_index = convert_u16_to_i32_be(&self.instructions[ip + 1..]) as usize;
+                    ip += 3; // One byte op, plus two u8 operands
+                    let value = self.pop();
+                    self.globals.borrow_mut()[global_index] = value;
+                }
             }
         }
 
