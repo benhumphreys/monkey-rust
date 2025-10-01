@@ -5,10 +5,11 @@ use crate::ast::{BlockStatement, Expression, Program, Statement};
 use crate::code::Opcode::{OpConstant, OpGetGlobal, OpSetGlobal};
 use crate::code::{make, Instructions, Opcode};
 use crate::object::Object;
-use crate::object::Object::Integer;
+use crate::object::Object::{Integer, StringObject};
 use crate::symbol_table::SymbolTable;
 use std::ops::Deref;
 use std::rc::Rc;
+use Opcode::{OpAdd, OpBang, OpDiv, OpEqual, OpFalse, OpGreaterThan, OpJump, OpJumpNotTruthy, OpMinus, OpMul, OpNotEqual, OpNull, OpSub, OpTrue};
 
 pub type CompilerResult<T = ()> = Result<T, String>;
 
@@ -83,13 +84,17 @@ impl Compiler {
                 self.emit(OpConstant, vec![pos]);
                 Ok(())
             }
-            Expression::StringLiteral(_, _) => {todo!()}
+            Expression::StringLiteral(_, value) => {
+                let pos = self.add_constant(&StringObject(value.to_string()));
+                self.emit(OpConstant, vec![pos]);
+                Ok(())
+            }
             Expression::Boolean(_, value) => {
                 if *value {
-                    self.emit(Opcode::OpTrue, vec![]);
+                    self.emit(OpTrue, vec![]);
                     Ok(())
                 } else {
-                    self.emit(Opcode::OpFalse, vec![]);
+                    self.emit(OpFalse, vec![]);
                     Ok(())
                 }
             }
@@ -98,11 +103,11 @@ impl Compiler {
 
                 match operator.as_str() {
                     "!" => {
-                        self.emit(Opcode::OpBang, vec![]);
+                        self.emit(OpBang, vec![]);
                         Ok(())
                     },
                     "-" => {
-                        self.emit(Opcode::OpMinus, vec![]);
+                        self.emit(OpMinus, vec![]);
                         Ok(())
                     },
                     &_ => Err(format!("unknown operator: {}", operator))
@@ -112,7 +117,7 @@ impl Compiler {
                 if operator == "<" {
                     self.compile_expression(right)?;
                     self.compile_expression(left)?;
-                    self.emit(Opcode::OpGreaterThan, vec![]);
+                    self.emit(OpGreaterThan, vec![]);
                     return Ok(())
                 }
 
@@ -121,31 +126,31 @@ impl Compiler {
 
                 match operator.as_str() {
                     "+" => {
-                        self.emit(Opcode::OpAdd, vec![]);
+                        self.emit(OpAdd, vec![]);
                         Ok(())
                     },
                     "-" => {
-                        self.emit(Opcode::OpSub, vec![]);
+                        self.emit(OpSub, vec![]);
                         Ok(())
                     },
                     "*" => {
-                        self.emit(Opcode::OpMul, vec![]);
+                        self.emit(OpMul, vec![]);
                         Ok(())
                     },
                     "/" => {
-                        self.emit(Opcode::OpDiv, vec![]);
+                        self.emit(OpDiv, vec![]);
                         Ok(())
                     },
                     ">" => {
-                        self.emit(Opcode::OpGreaterThan, vec![]);
+                        self.emit(OpGreaterThan, vec![]);
                         Ok(())
                     },
                     "==" => {
-                        self.emit(Opcode::OpEqual, vec![]);
+                        self.emit(OpEqual, vec![]);
                         Ok(())
                     },
                     "!=" => {
-                        self.emit(Opcode::OpNotEqual, vec![]);
+                        self.emit(OpNotEqual, vec![]);
                         Ok(())
                     }
                     &_ => Err(format!("unknown operator: {}", operator))
@@ -155,7 +160,7 @@ impl Compiler {
                 self.compile_expression(condition.deref())?;
 
                 // Emit an OpJumpNotTruthy with a bogus jump offset, to be patched later
-                let jump_not_truthy_pos = self.emit(Opcode::OpJumpNotTruthy, vec![9999]);
+                let jump_not_truthy_pos = self.emit(OpJumpNotTruthy, vec![9999]);
 
                 self.compile_block_statement(consequence)?;
 
@@ -165,7 +170,7 @@ impl Compiler {
                 }
 
                 // Emit an OpJump with a bogus jump offset, to be patched later
-                let jump_pos = self.emit(Opcode::OpJump, vec![9999]);
+                let jump_pos = self.emit(OpJump, vec![9999]);
 
                 let after_consequence_pos = self.instructions.len() as i32;
                 self.change_operand(jump_not_truthy_pos, after_consequence_pos);
@@ -176,7 +181,7 @@ impl Compiler {
                         self.remove_last_pop();
                     }
                 } else {
-                    self.emit(Opcode::OpNull, vec![]) ;
+                    self.emit(OpNull, vec![]) ;
                 }
 
                 let after_alternative_pos = self.instructions.len() as i32;

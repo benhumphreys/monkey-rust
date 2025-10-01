@@ -92,10 +92,22 @@ fn test_global_let_statements() {
     run_vm_test(&test_cases);
 }
 
+#[test]
+fn test_string_expressions() {
+    let test_cases = [
+        (r#""monkey""#, Value::String("monkey".to_string())),
+        (r#""mon" + "key""#, Value::String("monkey".to_string())),
+        (r#""mon" + "key" + "banana""#, Value::String("monkeybanana".to_string())),
+    ];
+
+    run_vm_test(&test_cases)
+}
+
 #[derive(Debug, Clone)]
 enum Value {
     Integer(i64),
     Boolean(bool),
+    String(String),
     Null
 }
 
@@ -128,7 +140,8 @@ fn assert_expected_object(actual: &Object, expected: Value, test_input: &str) {
     match expected {
         Value::Integer(expected) => assert_integer_object(actual, expected, test_input),
         Value::Boolean(expected) => assert_boolean_object(actual, expected, test_input),
-        Value::Null => assert_null_object(actual)
+        Value::String(expected) => assert_string_object(actual, expected.as_str(), test_input),
+        Value::Null => assert_null_object(actual),
     }
 }
 
@@ -151,6 +164,14 @@ fn assert_boolean_object(actual: &Object, expected: bool, test_input: &str) {
         assert_eq!(*value, expected, "Test input: {}", test_input);
     } else {
         panic!("Object not Boolean. Got={:?}. Test input: {}", actual, test_input);
+    }
+}
+
+fn assert_string_object(actual: &Object, expected: &str, test_input: &str) {
+    if let Object::StringObject(value) = actual {
+        assert_eq!(*value, expected, "Test input: {}", test_input);
+    } else {
+        panic!("Object not StringObject. Got={:?}. Test input: {}", actual, test_input);
     }
 }
 

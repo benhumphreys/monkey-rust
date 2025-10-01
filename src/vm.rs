@@ -1,8 +1,8 @@
-use std::cell::RefCell;
-use std::rc::Rc;
 use crate::code::{convert_u16_to_i32_be, Instructions, Opcode};
 use crate::compiler::Bytecode;
 use crate::object::{native_bool_to_bool_object, Object, ObjectType, OBJECT_BOOLEAN_FALSE, OBJECT_BOOLEAN_TRUE, OBJECT_NULL};
+use std::cell::RefCell;
+use std::rc::Rc;
 
 pub const GLOBAL_SIZE: usize = 65536;
 const STACK_SIZE: usize = 2048;
@@ -172,6 +172,9 @@ impl Vm {
             (Object::Integer(left_val), Object::Integer(right_val)) => {
                 self.execute_binary_integer_operation(op, *left_val, *right_val)
             }
+            (Object::StringObject(left_val), Object::StringObject(right_val)) => {
+                self.execute_binary_string_operation(op, left_val, right_val)
+            }
             (_, _) => {
                 Err(format!("unsupported types for binary operation: {} {}", left.object_type(), right.object_type()))
             }
@@ -188,6 +191,15 @@ impl Vm {
         };
 
         self.push(&Object::Integer(result?))
+    }
+
+    fn execute_binary_string_operation(&mut self, op: &Opcode, left: &String, right: &String) -> VmResult {
+        let result = match op {
+            Opcode::OpAdd => Ok(format!("{}{}", left, right)),
+            _ => Err(format!("unknown string operator: {}", op))
+        };
+
+        self.push(&Object::StringObject(result?))
     }
 
     fn execute_comparison(&mut self, op: &Opcode) -> VmResult {

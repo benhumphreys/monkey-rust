@@ -11,6 +11,7 @@ use monkey::parser::Parser;
 #[derive(Debug)]
 enum Value {
     Integer(i64),
+    String(String),
 }
 
 struct CompilerTestCase {
@@ -275,6 +276,31 @@ fn test_global_let_statements() {
     run_compiler_test(test_cases)
 }
 
+#[test]
+fn test_string_expressions() {
+    let test_cases = vec![
+        CompilerTestCase {
+            input: String::from("\"monkey\""),
+            expected_constants: vec![Value::String("monkey".to_string())],
+            expected_instructions: vec![
+                make(OpConstant, vec![0]),
+                make(OpPop, vec![]),
+            ]
+        },
+        CompilerTestCase {
+            input: String::from("\"mon\" + \"key\""),
+            expected_constants: vec![Value::String("mon".to_string()), Value::String("key".to_string())],
+            expected_instructions: vec![
+                make(OpConstant, vec![0]),
+                make(OpConstant, vec![1]),
+                make(OpAdd, vec![]),
+                make(OpPop, vec![]),
+            ]
+        }
+    ];
+
+    run_compiler_test(test_cases)
+}
 fn run_compiler_test(test_cases: Vec<CompilerTestCase>) {
     for test in test_cases {
         let program = parse(&test.input);
@@ -311,6 +337,7 @@ fn assert_constants(actual: Vec<Object>, expected: Vec<Value>) {
     for constant in expected {
         match constant {
             Value::Integer(val) => assert_integer_object(actual[i].clone(), val),
+            Value::String(val) => assert_string_object(actual[i].clone(), val.as_str()),
         }
         i += 1;
     }
@@ -321,6 +348,14 @@ fn assert_integer_object(actual: Object, expected: i64) {
         assert_eq!(value, expected);
     } else {
         panic!("Object not Integer. Got={:?}", actual);
+    }
+}
+
+fn assert_string_object(actual: Object, expected: &str) {
+    if let Object::StringObject(value) = actual {
+        assert_eq!(value, expected);
+    } else {
+        panic!("Object not StringObject. Got={:?}", actual);
     }
 }
 
