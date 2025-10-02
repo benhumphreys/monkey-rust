@@ -141,10 +141,27 @@ impl Vm {
                     let value = self.pop();
                     self.globals.borrow_mut()[global_index] = value;
                 }
+                Opcode::OpArray => {
+                    let num_elements = convert_u16_to_i32_be(&self.instructions[ip + 1..]) as usize;
+                    ip += 3; // One byte op, plus two u8 operands
+                    let array = self.build_array(self.sp as usize - num_elements, self.sp as usize);
+                    self.sp -= num_elements as i32;
+                    self.push(&array)?;
+                }
             }
         }
 
         Ok(())
+    }
+
+    fn build_array(&mut self, start_index: usize, end_index: usize) -> Object {
+        let mut elements = Vec::with_capacity(end_index - start_index);
+
+        for i in start_index..end_index {
+            elements.push(self.stack[i].clone());
+        }
+
+        Object::Array(elements)
     }
 
     fn push(&mut self, obj: &Object) -> VmResult {

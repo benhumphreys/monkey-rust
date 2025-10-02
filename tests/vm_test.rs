@@ -103,11 +103,23 @@ fn test_string_expressions() {
     run_vm_test(&test_cases)
 }
 
+#[test]
+fn test_array_literals() {
+    let test_cases = [
+        ("[]", Value::IntegerArray(vec![])),
+        ("[1, 2, 3]", Value::IntegerArray(vec![1, 2, 3])),
+        ("[1 + 2, 3 * 4, 5 + 6]", Value::IntegerArray(vec![3, 12, 11])),
+    ];
+
+    run_vm_test(&test_cases)
+}
+
 #[derive(Debug, Clone)]
 enum Value {
     Integer(i64),
     Boolean(bool),
     String(String),
+    IntegerArray(Vec<i64>),
     Null
 }
 
@@ -141,7 +153,8 @@ fn assert_expected_object(actual: &Object, expected: Value, test_input: &str) {
         Value::Integer(expected) => assert_integer_object(actual, expected, test_input),
         Value::Boolean(expected) => assert_boolean_object(actual, expected, test_input),
         Value::String(expected) => assert_string_object(actual, expected.as_str(), test_input),
-        Value::Null => assert_null_object(actual),
+        Value::IntegerArray(expected) => assert_integer_array_object(actual, expected, test_input),
+        Value::Null => assert_null_object(actual)
     }
 }
 
@@ -177,4 +190,17 @@ fn assert_string_object(actual: &Object, expected: &str, test_input: &str) {
 
 fn assert_null_object(object: &Object) {
     assert!(matches!(object, Object::Null), "Expected Null object, x Got: {:?}", object.object_type());
+}
+
+fn assert_integer_array_object(actual: &Object, expected: Vec<i64>, test_input: &str) {
+    if let Object::Array(actual) = actual {
+        assert_eq!(actual.len(), expected.len(), "Test input: {}", test_input);
+        for i in 0..actual.len() {
+            if let Object::Integer(value) = actual[i] {
+                assert_eq!(value, expected[i], "Test input: {}", test_input);
+            }
+        }
+    } else {
+        panic!("Object not Array. Got={:?}. Test input: {}", actual, test_input);
+    }
 }

@@ -191,7 +191,13 @@ impl Compiler {
             }
             Expression::FunctionLiteral(_, _, _) => {todo!()}
             Expression::CallExpression(_, _, _) => {todo!()}
-            Expression::ArrayLiteral(_, _) => {todo!()}
+            Expression::ArrayLiteral(_, elements) => {
+                for element in elements {
+                    self.compile_expression(element)?;
+                }
+                self.emit(Opcode::OpArray, vec![elements.len() as i32]);
+                Ok(())
+            }
             Expression::IndexExpression(_, _, _) => {todo!()}
             Expression::HashLiteral(_, _) => {todo!()}
         }
