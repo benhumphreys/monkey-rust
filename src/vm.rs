@@ -1,7 +1,8 @@
 use crate::code::{convert_u16_to_i32_be, Instructions, Opcode};
 use crate::compiler::Bytecode;
-use crate::object::{native_bool_to_bool_object, Object, ObjectType, OBJECT_BOOLEAN_FALSE, OBJECT_BOOLEAN_TRUE, OBJECT_NULL};
+use crate::object::{native_bool_to_bool_object, IsHashable, Object, ObjectType, OBJECT_BOOLEAN_FALSE, OBJECT_BOOLEAN_TRUE, OBJECT_NULL};
 use std::cell::RefCell;
+use std::collections::HashMap;
 use std::rc::Rc;
 
 pub const GLOBAL_SIZE: usize = 65536;
@@ -148,20 +149,38 @@ impl Vm {
                     self.sp -= num_elements as i32;
                     self.push(&array)?;
                 }
+                Opcode::OpHash => {
+                    let num_elements = convert_u16_to_i32_be(&self.instructions[ip + 1..]) as usize;
+                    ip += 3; // One byte op, plus two u8 operands
+                    let hash = self.build_hash(self.sp as usize - num_elements, self.sp as usize);
+                    self.sp -= num_elements as i32;
+                    self.push(&hash)?;
+                }
             }
         }
 
         Ok(())
     }
 
-    fn build_array(&mut self, start_index: usize, end_index: usize) -> Object {
-        let mut elements = Vec::with_capacity(end_index - start_index);
+    fn build_array(&self, start_index: usize, end_index: usize) -> Object {
+        let elements = self.stack[start_index..end_index].to_vec();
+        Object::Array(elements)
+    }
 
-        for i in start_index..end_index {
-            elements.push(self.stack[i].clone());
+    fn build_hash(&mut self, start_index: usize, end_index: usize) -> Object {
+        let mut hashed_pairs = HashMap::with_capacity((end_index - start_index) / 2);
+
+        for i in (start_index..end_index).step_by(2) {
+            let key = self.stack[i].clone();
+            if !key.is_hashable() {
+                return Object::Error(format!("unusable as hash key: {}", key.object_type()));
+            }
+
+            let value = self.stack[i + 1].clone();
+            hashed_pairs.insert(key, value);
         }
 
-        Object::Array(elements)
+        Object::HashObject(hashed_pairs)
     }
 
     fn push(&mut self, obj: &Object) -> VmResult {

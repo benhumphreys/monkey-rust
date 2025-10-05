@@ -114,12 +114,24 @@ fn test_array_literals() {
     run_vm_test(&test_cases)
 }
 
+#[test]
+fn test_hash_literals() {
+    let test_cases = [
+        //("{}", Value::IntergerMap(vec![])),
+        ("{1: 2, 2: 3}", Value::IntergerMap(vec![(1, 2), (2, 3)])),
+        //("{1 + 1: 2 * 2, 3 + 3: 4 * 4}", Value::IntergerMap(vec![(2, 4), (6, 16)])),
+    ];
+
+    run_vm_test(&test_cases)
+}
+
 #[derive(Debug, Clone)]
 enum Value {
     Integer(i64),
     Boolean(bool),
     String(String),
     IntegerArray(Vec<i64>),
+    IntergerMap(Vec<(i64, i64)>),
     Null
 }
 
@@ -154,7 +166,8 @@ fn assert_expected_object(actual: &Object, expected: Value, test_input: &str) {
         Value::Boolean(expected) => assert_boolean_object(actual, expected, test_input),
         Value::String(expected) => assert_string_object(actual, expected.as_str(), test_input),
         Value::IntegerArray(expected) => assert_integer_array_object(actual, expected, test_input),
-        Value::Null => assert_null_object(actual)
+        Value::IntergerMap(expected) => assert_integer_hash_object(actual, expected, test_input),
+        Value::Null => assert_null_object(actual),
     }
 }
 
@@ -202,5 +215,22 @@ fn assert_integer_array_object(actual: &Object, expected: Vec<i64>, test_input: 
         }
     } else {
         panic!("Object not Array. Got={:?}. Test input: {}", actual, test_input);
+    }
+}
+
+fn assert_integer_hash_object(actual: &Object, expected: Vec<(i64, i64)>, test_input: &str) {
+    if let Object::HashObject(actual) = actual {
+        assert_eq!(actual.len(), expected.len(), "Test input: {}", test_input);
+
+        for (expected_key, expected_value) in expected {
+            let actual_value = actual.get(&Object::Integer(expected_key));
+            if actual_value.is_none() {
+                panic!("Expected key {} not found in actual hash. Test input: {}", expected_key, test_input);
+            }
+
+            assert_integer_object(actual_value.unwrap(), expected_value, test_input);
+        }
+    } else {
+        panic!("Object not HashObject. Got={:?}. Test input: {}", actual, test_input);
     }
 }

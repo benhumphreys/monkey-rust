@@ -1,4 +1,4 @@
-use crate::code::Opcode::{OpAdd, OpArray, OpBang, OpConstant, OpDiv, OpEqual, OpFalse, OpGetGlobal, OpGreaterThan, OpJump, OpJumpNotTruthy, OpMinus, OpMul, OpNotEqual, OpNull, OpPop, OpSetGlobal, OpSub, OpTrue};
+use crate::code::Opcode::{OpAdd, OpArray, OpBang, OpConstant, OpDiv, OpEqual, OpFalse, OpGetGlobal, OpGreaterThan, OpHash, OpJump, OpJumpNotTruthy, OpMinus, OpMul, OpNotEqual, OpNull, OpPop, OpSetGlobal, OpSub, OpTrue};
 use std::fmt;
 use std::fmt::Write;
 
@@ -26,6 +26,7 @@ pub enum Opcode {
     OpGetGlobal,
     OpSetGlobal,
     OpArray,
+    OpHash,
 }
 
 impl Opcode {
@@ -50,6 +51,7 @@ impl Opcode {
             16 => Ok(OpGetGlobal),
             17 => Ok(OpSetGlobal),
             18 => Ok(OpArray),
+            19 => Ok(OpHash),
             _ => Err(format!("ERROR: no definition for opcode: {}", ordinal)),
         }
     }
@@ -75,6 +77,7 @@ impl Opcode {
             OpGetGlobal => vec![2],
             OpSetGlobal => vec![2],
             OpArray => vec![2],
+            OpHash => vec![2],
         }
     }
 }
@@ -101,6 +104,7 @@ impl fmt::Display for Opcode {
             OpGetGlobal => write!(f, "OpGetGlobal"),
             OpSetGlobal => write!(f, "OpSetGlobal"),
             OpArray => write!(f, "OpArray"),
+            OpHash => write!(f, "OpHash"),
         }
     }
 }

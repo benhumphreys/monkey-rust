@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 
 use monkey::ast::Program;
-use monkey::code::Opcode::{OpAdd, OpArray, OpBang, OpConstant, OpDiv, OpEqual, OpFalse, OpGetGlobal, OpGreaterThan, OpJump, OpJumpNotTruthy, OpMinus, OpMul, OpNotEqual, OpNull, OpPop, OpSetGlobal, OpSub, OpTrue};
+use monkey::code::Opcode::{OpAdd, OpArray, OpBang, OpConstant, OpDiv, OpEqual, OpFalse, OpGetGlobal, OpGreaterThan, OpHash, OpJump, OpJumpNotTruthy, OpMinus, OpMul, OpNotEqual, OpNull, OpPop, OpSetGlobal, OpSub, OpTrue};
 use monkey::code::{disassemble, make, Instructions};
 use monkey::compiler::Compiler;
 use monkey::lexer::Lexer;
@@ -345,6 +345,54 @@ fn test_array_literals() {
     ];
 
     run_compiler_test(test_cases)
+}
+
+#[test]
+fn test_hash_literals() {
+    let test_cases = vec![
+        CompilerTestCase {
+            input: String::from("{}"),
+            expected_constants: vec![],
+            expected_instructions: vec![
+                make(OpHash, vec![0]),
+                make(OpPop, vec![]),
+            ]
+        },
+        CompilerTestCase {
+            input: String::from("{1: 2, 3: 4, 5: 6}"),
+            expected_constants:vec![Value::Integer(1), Value::Integer(2), Value::Integer(3),
+                                    Value::Integer(4), Value::Integer(5), Value::Integer(6)],
+            expected_instructions: vec![
+                make(OpConstant, vec![0]),
+                make(OpConstant, vec![1]),
+                make(OpConstant, vec![2]),
+                make(OpConstant, vec![3]),
+                make(OpConstant, vec![4]),
+                make(OpConstant, vec![5]),
+                make(OpHash, vec![6]),
+                make(OpPop, vec![]),
+            ]
+        },
+        CompilerTestCase {
+            input: String::from("{1: 2  + 3, 4: 5 * 6}"),
+            expected_constants:vec![Value::Integer(1), Value::Integer(2), Value::Integer(3),
+                                    Value::Integer(4), Value::Integer(5), Value::Integer(6)],
+            expected_instructions: vec![
+                make(OpConstant, vec![0]),
+                make(OpConstant, vec![1]),
+                make(OpConstant, vec![2]),
+                make(OpAdd, vec![]),
+                make(OpConstant, vec![3]),
+                make(OpConstant, vec![4]),
+                make(OpConstant, vec![5]),
+                make(OpMul, vec![]),
+                make(OpHash, vec![4]),
+                make(OpPop, vec![]),
+            ]
+        }
+    ];
+
+    run_compiler_test(test_cases);
 }
 
 fn run_compiler_test(test_cases: Vec<CompilerTestCase>) {
