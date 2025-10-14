@@ -117,9 +117,27 @@ fn test_array_literals() {
 #[test]
 fn test_hash_literals() {
     let test_cases = [
-        //("{}", Value::IntergerMap(vec![])),
-        ("{1: 2, 2: 3}", Value::IntergerMap(vec![(1, 2), (2, 3)])),
-        //("{1 + 1: 2 * 2, 3 + 3: 4 * 4}", Value::IntergerMap(vec![(2, 4), (6, 16)])),
+        ("{}", Value::IntegerMap(vec![])),
+        ("{1: 2, 2: 3}", Value::IntegerMap(vec![(1, 2), (2, 3)])),
+        ("{1 + 1: 2 * 2, 3 + 3: 4 * 4}", Value::IntegerMap(vec![(2, 4), (6, 16)])),
+    ];
+
+    run_vm_test(&test_cases)
+}
+
+#[test]
+fn test_index_expressions() {
+    let test_cases = [
+        ("[1, 2, 3][1]", Value::Integer(2)),
+        ("[1, 2, 3][0 + 2]", Value::Integer(3)),
+        ("[[1, 1, 1]][0][0]", Value::Integer(1)),
+        ("[][0]", Value::Null),
+        ("[1, 2, 3][99]", Value::Null),
+        ("[1][-1]", Value::Null),
+        ("{1: 1, 2: 2}[1]", Value::Integer(1)),
+        ("{1: 1, 2: 2}[2]", Value::Integer(2)),
+        ("{1: 1}[0]", Value::Null),
+        ("{}[0]", Value::Null),
     ];
 
     run_vm_test(&test_cases)
@@ -131,7 +149,7 @@ enum Value {
     Boolean(bool),
     String(String),
     IntegerArray(Vec<i64>),
-    IntergerMap(Vec<(i64, i64)>),
+    IntegerMap(Vec<(i64, i64)>),
     Null
 }
 
@@ -166,7 +184,7 @@ fn assert_expected_object(actual: &Object, expected: Value, test_input: &str) {
         Value::Boolean(expected) => assert_boolean_object(actual, expected, test_input),
         Value::String(expected) => assert_string_object(actual, expected.as_str(), test_input),
         Value::IntegerArray(expected) => assert_integer_array_object(actual, expected, test_input),
-        Value::IntergerMap(expected) => assert_integer_hash_object(actual, expected, test_input),
+        Value::IntegerMap(expected) => assert_integer_hash_object(actual, expected, test_input),
         Value::Null => assert_null_object(actual),
     }
 }

@@ -156,6 +156,12 @@ impl Vm {
                     self.sp -= num_elements as i32;
                     self.push(&hash)?;
                 }
+                Opcode::OpIndex => {
+                    ip += 1;
+                    let index = self.pop();
+                    let left = self.pop();
+                    self.execute_index_expression(&left, &index)?;
+                }
             }
         }
 
@@ -290,6 +296,36 @@ impl Vm {
             self.push(&Object::Integer(-value))
         } else {
             Err(format!("unsupported type for negation: {}", operand.object_type()))
+        }
+    }
+
+    fn execute_index_expression(&mut self, left: &Object, index: &Object) -> VmResult {
+        match (left, index) {
+            (Object::Array(left_val), Object::Integer(index_val)) => {
+                self.execute_array_index(left_val, *index_val)
+            },
+            (Object::HashObject(left_val), _) => {
+                self.execute_hash_index(left_val, index)
+            },
+            (_, _) => Err(format!("index operator not supported: {}", left.object_type()))
+        }
+    }
+
+    fn execute_array_index(&mut self, array: &[Object], index: i64) -> VmResult {
+        if index < 0 || index > (array.len() as i64 - 1) {
+            return self.push(&OBJECT_NULL)
+        }
+        self.push(&array[index as usize].clone())
+    }
+
+    fn execute_hash_index(&mut self, hash: &HashMap<Object, Object>, index: &Object) -> VmResult {
+        if !index.is_hashable() {
+            return Err(format!("unusable as hash key: {}", index.object_type()));
+        }
+        if let Some(value) = hash.get(index) {
+            self.push(value)
+        } else {
+            self.push(&OBJECT_NULL)
         }
     }
 }

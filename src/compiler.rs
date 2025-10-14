@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 
 use std::cell::RefCell;
-use crate::ast::{BlockStatement, Expression, Node, Program, Statement};
+use crate::ast::{BlockStatement, Expression, Program, Statement};
 use crate::code::Opcode::{OpConstant, OpGetGlobal, OpSetGlobal};
 use crate::code::{make, Instructions, Opcode};
 use crate::object::Object;
@@ -198,7 +198,12 @@ impl Compiler {
                 self.emit(Opcode::OpArray, vec![elements.len() as i32]);
                 Ok(())
             }
-            Expression::IndexExpression(_, _, _) => {todo!()}
+            Expression::IndexExpression(_, left, index) => {
+                self.compile_expression(left)?;
+                self.compile_expression(index)?;
+                self.emit(Opcode::OpIndex, vec![]);
+                Ok(())
+            }
             Expression::HashLiteral(_, pairs) => {
                 for (key, value) in pairs {
                     self.compile_expression(key)?;
