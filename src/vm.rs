@@ -162,6 +162,9 @@ impl Vm {
                     let left = self.pop();
                     self.execute_index_expression(&left, &index)?;
                 }
+                Opcode::OpCall => {todo!()}
+                Opcode::OpReturnValue => {todo!()}
+                Opcode::OpReturn => {todo!()}
             }
         }
 

@@ -1,7 +1,11 @@
 # Monkey - Rust
 
 An interpreter for the Monkey language as described by Thorsten Ball in his
-excellent "Writing an interpreter in Go" book.
+excellent "Writing a compiler in Go" book.
+
+This originally started as a Rust implementation of the Monkey language as
+described in the boot "Writing an interpreter in Go", and the tag v1.0 contains
+the implementation at the conclusion of that book.
 
 # Motivation
 

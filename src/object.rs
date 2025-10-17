@@ -8,6 +8,7 @@ use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
 use std::hash::{Hash, Hasher};
 use std::rc::Rc;
+use crate::code::Instructions;
 
 pub type BuiltinFunction = fn(&[Object]) -> Object;
 
@@ -24,6 +25,7 @@ pub enum Object {
     Function(Vec<Identifier>, BlockStatement, Rc<RefCell<Environment>>),
     Array(Vec<Object>),
     HashObject(HashMap<Object, Object>),
+    CompiledFunction(Instructions),
     Builtin(BuiltinFunction),
     Error(String),
     Null,
@@ -70,9 +72,10 @@ impl Display for Object {
                            .collect::<Vec<String>>()
                            .join(", "))
             }
-            Object::Builtin(_) => {write!(f, "builtin function")},
+            Object::Builtin(_) => write!(f, "builtin function"),
             Object::Error(value) => write!(f, "error: {}", value),
             Object::Null =>  write!(f, "null"),
+            Object::CompiledFunction(_) => write!(f, "compiled function"),
         }
     }
 }
@@ -88,6 +91,7 @@ impl ObjectType for Object {
             Object::Array(_) => { "ARRAY" }
             Object::HashObject(_) => "HASH",
             Object::Builtin(_) => "BUILTIN",
+            Object::CompiledFunction(_) => "COMPILED_FUNCTION",
             Object::Error(_) => "ERROR",
             Object::Null => "NULL",
         }.to_string()
@@ -117,6 +121,9 @@ impl PartialEq for Object {
                 panic!("Not implemented: HashObject ==")
             }
             (Object::Builtin(f1), Object::Builtin(f2)) => f1 == f2,
+            (Object::CompiledFunction(_), Object::CompiledFunction(_)) => {
+                panic!("Not implemented: CompiledFunction ==")
+            }
             (Object::Error(a), Object::Error(b)) => a == b,
             (Object::Null, Object::Null) => true,
             _ => false,

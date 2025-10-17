@@ -251,7 +251,7 @@ impl Parser {
         self.next_token();
         let expression = self.parse_expression(Lowest)?;
 
-        while !self.cur_token_is(&TokenType::SemiColon) {
+        if self.peek_token_is(&TokenType::SemiColon) {
             self.next_token();
         }
 

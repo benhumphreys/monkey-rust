@@ -2,10 +2,10 @@
 
 use std::cell::RefCell;
 use crate::ast::{BlockStatement, Expression, Program, Statement};
-use crate::code::Opcode::{OpConstant, OpGetGlobal, OpSetGlobal};
+use crate::code::Opcode::{OpConstant, OpGetGlobal, OpPop, OpReturn, OpReturnValue, OpSetGlobal};
 use crate::code::{make, Instructions, Opcode};
 use crate::object::Object;
-use crate::object::Object::{Integer, StringObject};
+use crate::object::Object::{CompiledFunction, Integer, StringObject};
 use crate::symbol_table::SymbolTable;
 use std::ops::Deref;
 use std::rc::Rc;
@@ -13,12 +13,27 @@ use Opcode::{OpAdd, OpBang, OpDiv, OpEqual, OpFalse, OpGreaterThan, OpJump, OpJu
 
 pub type CompilerResult<T = ()> = Result<T, String>;
 
+pub struct CompilationScope {
+    pub instructions: Instructions,
+    pub last_instruction: EmittedInstruction,
+    pub previous_instruction: EmittedInstruction,
+}
+
+impl CompilationScope {
+    pub fn new() -> Self {
+        CompilationScope {
+            instructions: Instructions::new(),
+            last_instruction: EmittedInstruction::new(),
+            previous_instruction: EmittedInstruction::new(),
+        }
+    }
+}
+
 pub struct Compiler {
-    instructions: Instructions,
-    constants: Rc<RefCell<Vec<Object>>>,
-    last_instruction: EmittedInstruction,
-    previous_instruction: EmittedInstruction,
-    symbol_table: Rc<RefCell<SymbolTable>>
+    pub constants: Rc<RefCell<Vec<Object>>>,
+    pub symbol_table: Rc<RefCell<SymbolTable>>,
+    pub scopes: Vec<CompilationScope>,
+    pub scope_index: usize,
 }
 
 impl Compiler {
@@ -27,12 +42,13 @@ impl Compiler {
     }
 
     pub fn new_with_state(s: Rc<RefCell<SymbolTable>>, constants: Rc<RefCell<Vec<Object>>>) -> Self {
+        let main_scope = CompilationScope::new();
+
         Compiler {
-            instructions: Instructions::new(),
             constants: constants,
-            last_instruction: EmittedInstruction::new(),
-            previous_instruction: EmittedInstruction::new(),
-            symbol_table: s
+            symbol_table: s,
+            scopes: vec![main_scope],
+            scope_index: 0,
         }
     }
 
@@ -52,7 +68,11 @@ impl Compiler {
                 self.emit(OpSetGlobal, vec![symbol.index]);
                 Ok(())
             }
-            Statement::ReturnStatement(_, _) => {todo!()}
+            Statement::ReturnStatement(_, expr) => {
+                self.compile_expression(expr)?;
+                self.emit(Opcode::OpReturnValue, vec![]);
+                Ok(())
+            }
             Statement::ExpressionStatement(_, expression) => {
                 self.compile_expression(expression)?;
                 self.emit(Opcode::OpPop, vec![]);
@@ -165,31 +185,48 @@ impl Compiler {
                 self.compile_block_statement(consequence)?;
 
                 // If expressions are indeed expressions, therefore need to leave the last value on the stack
-                if self.last_instruction_is_pop() {
+                if self.last_instruction_is(&OpPop) {
                     self.remove_last_pop();
                 }
 
                 // Emit an OpJump with a bogus jump offset, to be patched later
                 let jump_pos = self.emit(OpJump, vec![9999]);
 
-                let after_consequence_pos = self.instructions.len() as i32;
+                let after_consequence_pos = self.current_instructions().len() as i32;
                 self.change_operand(jump_not_truthy_pos, after_consequence_pos);
 
                 if let Some(alternative) = alternative {
                     self.compile_block_statement(alternative)?;
-                    if self.last_instruction_is_pop() {
+                    if self.last_instruction_is(&OpPop) {
                         self.remove_last_pop();
                     }
                 } else {
                     self.emit(OpNull, vec![]) ;
                 }
 
-                let after_alternative_pos = self.instructions.len() as i32;
+                let after_alternative_pos = self.current_instructions().len() as i32;
                 self.change_operand(jump_pos, after_alternative_pos);
 
                 Ok(())
             }
-            Expression::FunctionLiteral(_, _, _) => {todo!()}
+            Expression::FunctionLiteral(_, _, body) => {
+                self.enter_scope();
+
+                self.compile_block_statement(body)?;
+                if self.last_instruction_is(&OpPop) {
+                    self.replace_last_pop_with_return();
+                }
+                if !self.last_instruction_is(&OpReturnValue) {
+                    self.emit(OpReturn, vec![]);
+                }
+
+                let instructions = self.leave_scope();
+
+                let compiled_fn = CompiledFunction(instructions);
+                let constant_idx = self.add_constant(&compiled_fn);
+                self.emit(OpConstant, vec![constant_idx]);
+                Ok(())
+            }
             Expression::CallExpression(_, _, _) => {todo!()}
             Expression::ArrayLiteral(_, elements) => {
                 for element in elements {
@@ -216,19 +253,19 @@ impl Compiler {
         }
     }
 
-    pub fn bytecode(&self) -> Bytecode {
+    pub fn bytecode(&mut self) -> Bytecode {
         Bytecode {
-            instructions: self.instructions.clone(),
+            instructions: self.current_instructions().clone(),
             constants: self.constants.borrow().clone()
         }
     }
 
-    fn add_constant(&mut self, obj: &Object) -> i32 {
+    pub fn add_constant(&mut self, obj: &Object) -> i32 {
         self.constants.borrow_mut().push(obj.clone());
         self.constants.borrow().len() as i32 - 1
     }
 
-    fn emit(&mut self, op: Opcode, operands: Vec<i32>) -> usize {
+    pub fn emit(&mut self, op: Opcode, operands: Vec<i32>) -> usize {
         let ins = make(op, operands);
         let pos = self.add_instruction(&ins);
 
@@ -236,46 +273,81 @@ impl Compiler {
         pos
     }
 
-    fn add_instruction(&mut self, ins: &Vec<u8>) -> usize {
-        let pos = self.instructions.len();
-        self.instructions.extend(ins);
+    pub fn add_instruction(&mut self, ins: &Vec<u8>) -> usize {
+        let pos = self.current_instructions().len();
+        self.current_instructions().extend(ins);
+        self.scopes[self.scope_index].instructions = self.current_instructions().clone();
         pos
     }
 
-    fn compile_block_statement(&mut self, block: &BlockStatement) -> CompilerResult {
+    pub fn compile_block_statement(&mut self, block: &BlockStatement) -> CompilerResult {
         for stmt in &block.statements {
             self.compile_statement(stmt)?;
         }
         Ok(())
     }
 
-    fn set_last_instruction(&mut self, op: Opcode, pos: usize) {
-        let previous = self.last_instruction.clone();
+    pub fn set_last_instruction(&mut self, op: Opcode, pos: usize) {
+        let previous = self.scopes[self.scope_index].last_instruction.clone();
         let last = EmittedInstruction{opcode: op, pos: pos};
 
-        self.previous_instruction = previous;
-        self.last_instruction = last;
+        self.scopes[self.scope_index].previous_instruction = previous;
+        self.scopes[self.scope_index].last_instruction = last;
     }
 
-    fn last_instruction_is_pop(&self) -> bool {
-        self.last_instruction.opcode == Opcode::OpPop
+    pub fn last_instruction_is(&mut self, op: &Opcode) -> bool {
+        if self.current_instructions().len() == 0 {
+            return false;
+        }
+        self.scopes[self.scope_index].last_instruction.opcode == *op
     }
 
-    fn remove_last_pop(&mut self) {
-        self.instructions.pop();
-        self.last_instruction = self.previous_instruction.clone();
+    pub fn remove_last_pop(&mut self) {
+        let last = self.scopes[self.scope_index].last_instruction.clone();
+        let previous = self.scopes[self.scope_index].previous_instruction.clone();
+
+        let old = self.current_instructions();
+        let new = old[..last.pos].to_vec();
+
+        self.scopes[self.scope_index].instructions = new;
+        self.scopes[self.scope_index].last_instruction = previous;
     }
 
-    fn replace_instruction(&mut self, pos: usize, new_instruction: &[u8]) {
+    pub fn replace_instruction(&mut self, pos: usize, new_instruction: &[u8]) {
+        let ins = self.current_instructions();
+
         for i in 0..new_instruction.len() {
-            self.instructions[pos + i] = new_instruction[i];
+            ins[pos + i] = new_instruction[i];
         }
     }
 
-    fn change_operand(&mut self, op_pos: usize, operand: i32) {
-        let op = Opcode::from_ordinal(self.instructions[op_pos]).unwrap();
+    pub fn change_operand(&mut self, op_pos: usize, operand: i32) {
+        let op = Opcode::from_ordinal(self.current_instructions()[op_pos]).unwrap();
         let new_instruction = make(op, vec![operand]);
         self.replace_instruction(op_pos, &new_instruction);
+    }
+
+    pub fn enter_scope(&mut self) {
+        let scope = CompilationScope::new();
+        self.scopes.push(scope);
+        self.scope_index += 1;
+    }
+
+    pub fn leave_scope(&mut self) -> Instructions {
+        let instructions = self.current_instructions().clone();
+        self.scopes.pop();
+        self.scope_index -= 1;
+        instructions
+    }
+
+    pub fn current_instructions(&mut self) -> &mut Instructions {
+        &mut self.scopes[self.scope_index].instructions
+    }
+
+    fn replace_last_pop_with_return(&mut self) {
+        let last_pos = self.scopes[self.scope_index].last_instruction.pos;
+        self.replace_instruction(last_pos, &make(Opcode::OpReturnValue, vec![]));
+        self.scopes[self.scope_index].last_instruction.opcode = Opcode::OpReturnValue;
     }
 }
 
@@ -284,10 +356,10 @@ pub struct Bytecode {
     pub constants: Vec<Object>
 }
 
-#[derive(Clone)]
-struct EmittedInstruction {
-    opcode: Opcode,
-    pos: usize,
+#[derive(Clone, Copy)]
+pub struct EmittedInstruction {
+    pub opcode: Opcode,
+    pub pos: usize,
 }
 
 impl EmittedInstruction {

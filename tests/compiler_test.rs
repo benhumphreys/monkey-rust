@@ -1,5 +1,5 @@
 use monkey::ast::Program;
-use monkey::code::Opcode::{OpAdd, OpArray, OpBang, OpConstant, OpDiv, OpEqual, OpFalse, OpGetGlobal, OpGreaterThan, OpHash, OpIndex, OpJump, OpJumpNotTruthy, OpMinus, OpMul, OpNotEqual, OpNull, OpPop, OpSetGlobal, OpSub, OpTrue};
+use monkey::code::Opcode::{OpAdd, OpArray, OpBang, OpConstant, OpDiv, OpEqual, OpFalse, OpGetGlobal, OpGreaterThan, OpHash, OpIndex, OpJump, OpJumpNotTruthy, OpMinus, OpMul, OpNotEqual, OpNull, OpPop, OpReturn, OpReturnValue, OpSetGlobal, OpSub, OpTrue};
 use monkey::code::{disassemble, make, Instructions};
 use monkey::compiler::Compiler;
 use monkey::lexer::Lexer;
@@ -10,6 +10,7 @@ use monkey::parser::Parser;
 enum Value {
     Integer(i64),
     String(String),
+    Instructions(Vec<u8>)
 }
 
 struct CompilerTestCase {
@@ -432,6 +433,114 @@ fn test_index_expressions() {
     run_compiler_test(test_cases);
 }
 
+#[test]
+fn test_functions() {
+    let test_cases = vec![
+        CompilerTestCase {
+            input: String::from("fn() { return 5 + 10 }"),
+            expected_constants: vec![
+                Value::Integer(5),
+                Value::Integer(10),
+                Value::Instructions([
+                    make(OpConstant, vec![0]),
+                    make(OpConstant, vec![1]),
+                    make(OpAdd, vec![]),
+                    make(OpReturnValue, vec![]),
+                ].concat())
+            ],
+            expected_instructions: vec![
+                make(OpConstant, vec![2]),
+                make(OpPop, vec![]),
+            ]
+        },
+        CompilerTestCase {
+            input: String::from("fn() { 5 + 10 }"),
+            expected_constants: vec![
+                Value::Integer(5),
+                Value::Integer(10),
+                Value::Instructions([
+                    make(OpConstant, vec![0]),
+                    make(OpConstant, vec![1]),
+                    make(OpAdd, vec![]),
+                    make(OpReturnValue, vec![]),
+                ].concat())
+            ],
+            expected_instructions: vec![
+                make(OpConstant, vec![2]),
+                make(OpPop, vec![]),
+            ]
+        },
+        CompilerTestCase {
+            input: String::from("fn() { 1; 2 }"),
+            expected_constants: vec![
+                Value::Integer(1),
+                Value::Integer(2),
+                Value::Instructions([
+                    make(OpConstant, vec![0]),
+                    make(OpPop, vec![]),
+                    make(OpConstant, vec![1]),
+                    make(OpReturnValue, vec![]),
+                ].concat())
+            ],
+            expected_instructions: vec![
+                make(OpConstant, vec![2]),
+                make(OpPop, vec![]),
+            ]
+        },
+    ];
+
+    run_compiler_test(test_cases);
+}
+
+#[test]
+fn test_compiler_scopes() {
+    let mut compiler = Compiler::new();
+    assert_eq!(compiler.scope_index, 0, "scope_index wrong");
+
+    compiler.emit(OpMul, vec![]);
+    compiler.enter_scope();
+    assert_eq!(compiler.scope_index, 1, "scope_index wrong");
+
+    compiler.emit(OpSub, vec![]);
+    assert_eq!(compiler.scopes[compiler.scope_index].instructions.len(), 1, "instructions length wrong");
+
+    let mut last = compiler.scopes[compiler.scope_index].last_instruction;
+    assert_eq!(last.opcode, OpSub, "last instruction wrong");
+
+    compiler.leave_scope();
+    assert_eq!(compiler.scope_index, 0, "scope_index wrong");
+
+    compiler.emit(OpAdd, vec![]);
+    assert_eq!(compiler.scopes[compiler.scope_index].instructions.len(), 2, "instructions length wrong");
+
+
+    last = compiler.scopes[compiler.scope_index].last_instruction;
+    assert_eq!(last.opcode, OpAdd, "last instruction wrong");
+
+    let previous = compiler.scopes[compiler.scope_index].previous_instruction;
+    assert_eq!(previous.opcode, OpMul, "previous instruction wrong");
+}
+
+#[test]
+fn test_functions_without_return_value() {
+    let test_cases = vec![
+        CompilerTestCase {
+            input: String::from("fn() { }"),
+            expected_constants: vec![
+                Value::Instructions([
+                    make(OpReturn, vec![]),
+                ].concat())
+            ],
+            expected_instructions: vec![
+                make(OpConstant, vec![0]),
+                make(OpPop, vec![]),
+            ]
+        }
+    ];
+
+    run_compiler_test(test_cases);
+}
+
 fn run_compiler_test(test_cases: Vec<CompilerTestCase>) {
     for test in test_cases {
         let program = parse(&test.input);
@@ -445,7 +554,7 @@ fn run_compiler_test(test_cases: Vec<CompilerTestCase>) {
         let bytecode = compiler.bytecode();
 
         assert_instructions(bytecode.instructions, test.expected_instructions, test.input.as_str());
-        assert_constants(bytecode.constants, test.expected_constants);
+        assert_constants(bytecode.constants, test.expected_constants, test.input.as_str());
     }
 }
 
@@ -461,7 +570,7 @@ fn assert_instructions(actual: Instructions, expected: Vec<Instructions>, test_c
     }
 }
 
-fn assert_constants(actual: Vec<Object>, expected: Vec<Value>) {
+fn assert_constants(actual: Vec<Object>, expected: Vec<Value>, test_case: &str) {
     assert_eq!(actual.len(), expected.len());
 
     let mut i = 0;
@@ -469,6 +578,13 @@ fn assert_constants(actual: Vec<Object>, expected: Vec<Value>) {
         match constant {
             Value::Integer(val) => assert_integer_object(actual[i].clone(), val),
             Value::String(val) => assert_string_object(actual[i].clone(), val.as_str()),
+            Value::Instructions(val) => {
+                if let Object::CompiledFunction(compiled_function) = actual[i].clone() {
+                    assert_instructions(compiled_function, vec![val], test_case)
+                } else {
+                    panic!("constant {} - not a function: {:?}", i, actual[i]);
+                }
+            }
         }
         i += 1;
     }

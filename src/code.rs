@@ -1,4 +1,4 @@
-use crate::code::Opcode::{OpAdd, OpArray, OpBang, OpConstant, OpDiv, OpEqual, OpFalse, OpGetGlobal, OpGreaterThan, OpHash, OpIndex, OpJump, OpJumpNotTruthy, OpMinus, OpMul, OpNotEqual, OpNull, OpPop, OpSetGlobal, OpSub, OpTrue};
+use crate::code::Opcode::{OpAdd, OpArray, OpBang, OpCall, OpConstant, OpDiv, OpEqual, OpFalse, OpGetGlobal, OpGreaterThan, OpHash, OpIndex, OpJump, OpJumpNotTruthy, OpMinus, OpMul, OpNotEqual, OpNull, OpPop, OpReturn, OpReturnValue, OpSetGlobal, OpSub, OpTrue};
 use std::fmt;
 use std::fmt::Write;
 
@@ -28,6 +28,12 @@ pub enum Opcode {
     OpArray,
     OpHash,
     OpIndex,
+    /// Start executing the CompiledFunction sitting at the top of the stack.
+    OpCall,
+    /// Return the value on top of the stack to the calling context and resume executing there.
+    OpReturnValue,
+    /// Return to the calling context and resume executing there, but with no explicit return value.
+    OpReturn,
 }
 
 impl Opcode {
@@ -54,6 +60,9 @@ impl Opcode {
             18 => Ok(OpArray),
             19 => Ok(OpHash),
             20 => Ok(OpIndex),
+            21 => Ok(OpCall),
+            22 => Ok(OpReturnValue),
+            23 => Ok(OpReturn),
             _ => Err(format!("ERROR: no definition for opcode: {}", ordinal)),
         }
     }
@@ -81,6 +90,9 @@ impl Opcode {
             OpArray => vec![2],
             OpHash => vec![2],
             OpIndex => vec![],
+            OpCall => vec![],
+            OpReturnValue => vec![],
+            OpReturn => vec![],
         }
     }
 }
@@ -109,6 +121,9 @@ impl fmt::Display for Opcode {
             OpArray => write!(f, "OpArray"),
             OpHash => write!(f, "OpHash"),
             OpIndex => write!(f, "OpIndex"),
+            OpCall => write!(f, "OpCall"),
+            OpReturnValue => write!(f, "OpReturnValue"),
+            OpReturn => write!(f, "OpReturn"),
         }
     }
 }
