@@ -227,7 +227,11 @@ impl Compiler {
                 self.emit(OpConstant, vec![constant_idx]);
                 Ok(())
             }
-            Expression::CallExpression(_, _, _) => {todo!()}
+            Expression::CallExpression(_, function, arguments) => {
+                self.compile_expression(function)?;
+                self.emit(Opcode::OpCall, vec![]);
+                Ok(())
+            }
             Expression::ArrayLiteral(_, elements) => {
                 for element in elements {
                     self.compile_expression(element)?;
