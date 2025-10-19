@@ -1,5 +1,6 @@
-use crate::code::{convert_u16_to_i32_be, Instructions, Opcode};
+use crate::code::{convert_u16_to_i32_be, Opcode};
 use crate::compiler::Bytecode;
+use crate::frame::Frame;
 use crate::object::{native_bool_to_bool_object, IsHashable, Object, ObjectType, OBJECT_BOOLEAN_FALSE, OBJECT_BOOLEAN_TRUE, OBJECT_NULL};
 use std::cell::RefCell;
 use std::collections::HashMap;
@@ -12,33 +13,45 @@ pub type VmResult<T = ()> = Result<T, String>;
 
 pub struct Vm {
     constants: Vec<Object>,
-    instructions: Instructions,
     globals: Rc<RefCell<Vec<Object>>>,
 
+    // Operation stack
     stack: [Object; STACK_SIZE],
-    sp: i32
+    sp: i32,
+
+    // Call stack
+    frames: Vec<Frame>,
 }
 
 impl Vm {
     pub fn new(bytecode: &Bytecode) -> Self {
-        Self {
-            constants: bytecode.constants.clone(),
-            instructions: bytecode.instructions.clone(),
-            globals: Rc::new(RefCell::new(vec![Object::Null; GLOBAL_SIZE])),
-            stack: [OBJECT_NULL; STACK_SIZE],
-            sp: 0, // Top of the stack is stack[sp - 1], the next free slot is stack[sp]
-        }
+        Self::new_with_globals_store(bytecode, Rc::new(RefCell::new(vec![Object::Null; GLOBAL_SIZE])))
     }
 
-    pub fn new_with_globals_store(bytecode: Bytecode, globals: Rc<RefCell<Vec<Object>>>) -> Self {
+    pub fn new_with_globals_store(bytecode: &Bytecode, globals: Rc<RefCell<Vec<Object>>>) -> Self {
+        let main_frame = Frame::new(bytecode.instructions.clone());
+        let frames = vec![main_frame];
+
         Self {
-            constants: bytecode.constants,
-            instructions: bytecode.instructions,
+            constants: bytecode.constants.clone(),
             globals: globals,
             stack: [OBJECT_NULL; STACK_SIZE],
             sp: 0, // Top of the stack is stack[sp - 1], the next free slot is stack[sp]
+            frames: frames
         }
+    }
 
+    pub fn current_frame(&mut self) -> &mut Frame {
+        let len = self.frames.len();
+        &mut self.frames[len - 1]
+    }
+
+    pub fn push_frame(&mut self, frame: Frame) {
+        self.frames.push(frame);
+    }
+
+    pub fn pop_frame(&mut self) -> Frame {
+        self.frames.pop().unwrap()
     }
 
     pub fn stack_top(&mut self) -> Object {
@@ -53,118 +66,125 @@ impl Vm {
     }
 
     pub fn run(&mut self) -> VmResult {
-        let mut ip = 0;
-        while ip < self.instructions.len() {
-            let op = Opcode::from_ordinal(self.instructions[ip])?;
+        while self.current_frame().ip < self.current_frame().instructions().len() {
+            let ip = self.current_frame().ip;
+            let op = Opcode::from_ordinal(self.current_frame().instructions()[ip])?;
+            let ins = self.current_frame().instructions().clone();
 
             match op {
                 Opcode::OpConstant => {
-                    let const_index = convert_u16_to_i32_be(&self.instructions[ip + 1..]) as usize;
+                    let const_index = convert_u16_to_i32_be(&ins[ip + 1..]) as usize;
                     self.push(&self.constants[const_index].clone())?;
-                    ip += 3; // One byte op, plus two u8 operands
+                    self.current_frame().ip += 3; // One byte op, plus two u8 operands
                 }
                 Opcode::OpAdd => {
-                    ip += 1; // One byte op, no operands
+                    self.current_frame().ip += 1; // One byte op, no operands
                     self.execute_binary_operation(&op)?
                 }
                 Opcode::OpSub => {
-                    ip += 1; // One byte op, no operands
+                    self.current_frame().ip += 1; // One byte op, no operands
                     self.execute_binary_operation(&op)?
                 }
                 Opcode::OpMul => {
-                    ip += 1; // One byte op, no operands
+                    self.current_frame().ip += 1; // One byte op, no operands
                     self.execute_binary_operation(&op)?
                 }
                 Opcode::OpDiv => {
-                    ip += 1; // One byte op, no operands
+                    self.current_frame().ip += 1; // One byte op, no operands
                     self.execute_binary_operation(&op)?
                 }
                 Opcode::OpPop => {
-                    ip += 1; // One byte op, no operands
+                    self.current_frame().ip += 1; // One byte op, no operands
                     self.pop();
                 }
                 Opcode::OpTrue => {
-                    ip += 1; // One byte op, no operands
+                    self.current_frame().ip += 1; // One byte op, no operands
                     self.push(&OBJECT_BOOLEAN_TRUE)?;
                 }
                 Opcode::OpFalse => {
-                    ip += 1; // One byte op, no operands
+                    self.current_frame().ip += 1; // One byte op, no operands
                     self.push(&OBJECT_BOOLEAN_FALSE)?;
                 }
                 Opcode::OpEqual => {
-                    ip += 1;
+                    self.current_frame().ip += 1;
                     self.execute_comparison(&op)?
                 }
                 Opcode::OpNotEqual => {
-                    ip += 1;
+                    self.current_frame().ip += 1;
                     self.execute_comparison(&op)?
                 }
                 Opcode::OpGreaterThan => {
-                    ip += 1;
+                    self.current_frame().ip += 1;
                     self.execute_comparison(&op)?
                 }
                 Opcode::OpMinus => {
-                    ip += 1;
+                    self.current_frame().ip += 1;
                     self.execute_minus_operator()?
                 }
                 Opcode::OpBang => {
-                    ip += 1;
+                    self.current_frame().ip += 1;
                     self.execute_bang_operator()?
                 }
                 Opcode::OpJumpNotTruthy => {
                     let condition = self.pop();
                     if is_truthy(&condition) {
-                        ip += 3; // One byte op, plus two u8 operands
+                        self.current_frame().ip += 3; // One byte op, plus two u8 operands
                     } else {
-                        let pos = convert_u16_to_i32_be(&self.instructions[ip + 1..]) as usize;
-                        ip = pos;
+                        let pos = convert_u16_to_i32_be(&ins[ip + 1..]) as usize;
+                        self.current_frame().ip = pos;
                     }
                 }
                 Opcode::OpJump => {
-                    let pos = convert_u16_to_i32_be(&self.instructions[ip + 1..]) as usize;
-                    ip = pos;
+                    let pos = convert_u16_to_i32_be(&ins[ip + 1..]) as usize;
+                    self.current_frame().ip = pos;
                 }
                 Opcode::OpNull => {
                     self.push(&OBJECT_NULL)?;
-                    ip += 1;
+                    self.current_frame().ip += 1;
                 }
                 Opcode::OpGetGlobal => {
-                    let global_index = convert_u16_to_i32_be(&self.instructions[ip + 1..]) as usize;
-                    ip += 3; // One byte op, plus two u8 operands
+                    let global_index = convert_u16_to_i32_be(&ins[ip + 1..]) as usize;
+                    self.current_frame().ip += 3; // One byte op, plus two u8 operands
                     let value = {
                         &self.globals.borrow()[global_index].clone()
                     };
                     self.push(value)?;
                 }
                 Opcode::OpSetGlobal => {
-                    let global_index = convert_u16_to_i32_be(&self.instructions[ip + 1..]) as usize;
-                    ip += 3; // One byte op, plus two u8 operands
+                    let global_index = convert_u16_to_i32_be(&ins[ip + 1..]) as usize;
+                    self.current_frame().ip += 3; // One byte op, plus two u8 operands
                     let value = self.pop();
                     self.globals.borrow_mut()[global_index] = value;
                 }
                 Opcode::OpArray => {
-                    let num_elements = convert_u16_to_i32_be(&self.instructions[ip + 1..]) as usize;
-                    ip += 3; // One byte op, plus two u8 operands
+                    let num_elements = convert_u16_to_i32_be(&ins[ip + 1..]) as usize;
+                    self.current_frame().ip += 3; // One byte op, plus two u8 operands
                     let array = self.build_array(self.sp as usize - num_elements, self.sp as usize);
                     self.sp -= num_elements as i32;
                     self.push(&array)?;
                 }
                 Opcode::OpHash => {
-                    let num_elements = convert_u16_to_i32_be(&self.instructions[ip + 1..]) as usize;
-                    ip += 3; // One byte op, plus two u8 operands
+                    let num_elements = convert_u16_to_i32_be(&ins[ip + 1..]) as usize;
+                    self.current_frame().ip += 3; // One byte op, plus two u8 operands
                     let hash = self.build_hash(self.sp as usize - num_elements, self.sp as usize);
                     self.sp -= num_elements as i32;
                     self.push(&hash)?;
                 }
                 Opcode::OpIndex => {
-                    ip += 1;
+                    self.current_frame().ip += 1;
                     let index = self.pop();
                     let left = self.pop();
                     self.execute_index_expression(&left, &index)?;
                 }
-                Opcode::OpCall => {todo!()}
-                Opcode::OpReturnValue => {todo!()}
-                Opcode::OpReturn => {todo!()}
+                Opcode::OpCall => {
+                    self.current_frame().ip += 1;
+                }
+                Opcode::OpReturnValue => {
+                    self.current_frame().ip += 1;
+                }
+                Opcode::OpReturn => {
+                    self.current_frame().ip += 1;
+                }
             }
         }
 

@@ -73,7 +73,7 @@ fn repl() {
                 continue;
             }
 
-            let mut vm = Vm::new_with_globals_store(comp.bytecode(), globals.clone());
+            let mut vm = Vm::new_with_globals_store(&comp.bytecode(), globals.clone());
             vm.run();
             let stack_top = vm.last_popped_stack_elem();
             println!("{}", stack_top);
