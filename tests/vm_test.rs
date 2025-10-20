@@ -143,6 +143,64 @@ fn test_index_expressions() {
     run_vm_test(&test_cases)
 }
 
+#[test]
+fn test_calling_functions_without_arguments() {
+    let test_cases = [
+        ("let fivePlusTen = fn() { 5 + 10 };
+         fivePlusTen()", Value::Integer(15)),
+
+        ("let one = fn() { 1 };
+          let two = fn() { 2 };
+          one() + two()", Value::Integer(3)),
+
+        ("let a = fn() { 1 };
+          let b = fn() { a() + 1 };
+          let c = fn() { b() + 1 };
+          c()", Value::Integer(3)),
+    ];
+
+    run_vm_test(&test_cases)
+}
+
+#[test]
+fn test_functions_with_return_statement() {
+    let test_cases = [
+        ("let earlyExit = fn() { return 99; 100 };
+         earlyExit()", Value::Integer(99)),
+
+        ("let earlyExit = fn() { return 99; return 100 };
+         earlyExit()", Value::Integer(99)),
+    ];
+
+    run_vm_test(&test_cases)
+}
+
+#[test]
+fn test_functions_without_return_value() {
+    let test_cases = [
+        ("let noReturn = fn() { };
+          noReturn()", Value::Null),
+
+        ("let noReturn = fn() { };
+          let noReturnTwo = fn() { noReturn(); };
+          noReturn();
+          noReturnTwo()", Value::Null),
+    ];
+
+    run_vm_test(&test_cases)
+}
+
+#[test]
+fn test_first_class_functions() {
+    let test_cases = [
+        ("let returnsOne = fn() { 1; };
+          let returnsOneReturner = fn() { returnsOne; };
+          returnsOneReturner()()", Value::Integer(1))
+    ];
+
+    run_vm_test(&test_cases)
+}
+
 #[derive(Debug, Clone)]
 enum Value {
     Integer(i64),

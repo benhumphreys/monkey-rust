@@ -1,5 +1,4 @@
 use crate::code::Instructions;
-use crate::object::Object;
 
 pub struct Frame {
     func: Instructions,

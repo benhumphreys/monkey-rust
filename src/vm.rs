@@ -1,5 +1,5 @@
 use crate::code::{convert_u16_to_i32_be, Opcode};
-use crate::compiler::Bytecode;
+use crate::compiler::{Bytecode};
 use crate::frame::Frame;
 use crate::object::{native_bool_to_bool_object, IsHashable, Object, ObjectType, OBJECT_BOOLEAN_FALSE, OBJECT_BOOLEAN_TRUE, OBJECT_NULL};
 use std::cell::RefCell;
@@ -178,12 +178,29 @@ impl Vm {
                 }
                 Opcode::OpCall => {
                     self.current_frame().ip += 1;
+                    let func = self.stack[self.sp as usize - 1].clone();
+                    if let Object::CompiledFunction(instructions) = func {
+                        let frame = Frame::new(instructions);
+                        self.push_frame(frame);
+                    } else {
+                        return Err("calling non-function".to_string())
+                    }
                 }
                 Opcode::OpReturnValue => {
                     self.current_frame().ip += 1;
+                    let return_value = self.pop();
+
+                    self.pop_frame();
+                    self.pop(); // Pop the just executed CompiledFunction off the stack
+
+                    self.push(&return_value)?
                 }
                 Opcode::OpReturn => {
                     self.current_frame().ip += 1;
+                    self.pop_frame();
+                    self.pop();
+
+                    self.push(&OBJECT_NULL)?;
                 }
             }
         }
