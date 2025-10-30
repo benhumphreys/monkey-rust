@@ -1,10 +1,14 @@
+use std::cell::RefCell;
+use std::ops::Deref;
+use std::rc::Rc;
 use monkey::ast::Program;
-use monkey::code::Opcode::{OpAdd, OpArray, OpBang, OpCall, OpConstant, OpDiv, OpEqual, OpFalse, OpGetGlobal, OpGreaterThan, OpHash, OpIndex, OpJump, OpJumpNotTruthy, OpMinus, OpMul, OpNotEqual, OpNull, OpPop, OpReturn, OpReturnValue, OpSetGlobal, OpSub, OpTrue};
+use monkey::code::Opcode::{OpAdd, OpArray, OpBang, OpCall, OpConstant, OpDiv, OpEqual, OpFalse, OpGetGlobal, OpGetLocal, OpGreaterThan, OpHash, OpIndex, OpJump, OpJumpNotTruthy, OpMinus, OpMul, OpNotEqual, OpNull, OpPop, OpReturn, OpReturnValue, OpSetGlobal, OpSetLocal, OpSub, OpTrue};
 use monkey::code::{disassemble, make, Instructions};
 use monkey::compiler::Compiler;
 use monkey::lexer::Lexer;
 use monkey::object::Object;
 use monkey::parser::Parser;
+use monkey::symbol_table::SymbolTable;
 
 #[derive(Debug)]
 enum Value {
@@ -497,6 +501,8 @@ fn test_compiler_scopes() {
     let mut compiler = Compiler::new();
     assert_eq!(compiler.scope_index, 0, "scope_index wrong");
 
+    let global_symbol_table = Rc::clone(&compiler.symbol_table);
+
     compiler.emit(OpMul, vec![]);
     compiler.enter_scope();
     assert_eq!(compiler.scope_index, 1, "scope_index wrong");
@@ -507,12 +513,20 @@ fn test_compiler_scopes() {
     let mut last = compiler.scopes[compiler.scope_index].last_instruction;
     assert_eq!(last.opcode, OpSub, "last instruction wrong");
 
+    assert_ne!(compiler.symbol_table.borrow().outer, None, "compiler did not enclose symbol table");
+    assert!(Rc::ptr_eq(
+        compiler.symbol_table.borrow().outer.as_ref().unwrap(),
+        &global_symbol_table
+    ), "compiler did not enclose symbol table correctly");
+
     compiler.leave_scope();
     assert_eq!(compiler.scope_index, 0, "scope_index wrong");
 
+    assert!(Rc::ptr_eq(&compiler.symbol_table, &global_symbol_table), "compiler did not restore global symbol table");
+    assert_eq!(compiler.symbol_table.borrow().outer, None, "compiler modified global symbol table incorrectly");
+
     compiler.emit(OpAdd, vec![]);
     assert_eq!(compiler.scopes[compiler.scope_index].instructions.len(), 2, "instructions length wrong");
-
 
     last = compiler.scopes[compiler.scope_index].last_instruction;
     assert_eq!(last.opcode, OpAdd, "last instruction wrong");
@@ -574,6 +588,81 @@ fn test_function_calls() {
                 make(OpSetGlobal, vec![0]),
                 make(OpGetGlobal, vec![0]),
                 make(OpCall, vec![]),
+                make(OpPop, vec![]),
+            ]
+        },
+    ];
+
+    run_compiler_test(test_cases);
+}
+
+#[test]
+fn test_let_statement_scopes() {
+    let test_cases = vec![
+        CompilerTestCase {
+            input: String::from("\
+            let num = 55;\n\
+            fn() { num }\n\
+            "),
+            expected_constants: vec![
+                Value::Integer(55),
+                Value::Instructions([
+                    make(OpGetGlobal, vec![0]),
+                    make(OpReturnValue, vec![]),
+                ].concat())
+            ],
+            expected_instructions: vec![
+                make(OpConstant, vec![0]),
+                make(OpSetGlobal, vec![0]),
+                make(OpConstant, vec![1]),
+                make(OpPop, vec![]),
+            ]
+        },
+        CompilerTestCase {
+            input: String::from("\
+            fn() {\n\
+                let num = 55;\n\
+                num\n\
+            }\
+            "),
+            expected_constants: vec![
+                Value::Integer(55),
+                Value::Instructions([
+                    make(OpConstant, vec![0]),
+                    make(OpSetLocal, vec![0]),
+                    make(OpGetLocal, vec![0]),
+                    make(OpReturnValue, vec![]),
+                ].concat())
+            ],
+            expected_instructions: vec![
+                make(OpConstant, vec![1]),
+                make(OpPop, vec![]),
+            ]
+        },
+        CompilerTestCase {
+            input: String::from("\
+            fn() {\n\
+                let a = 55;\n\
+                let b = 77;\n\
+                a + b\n\
+            }\
+            "),
+            expected_constants: vec![
+                Value::Integer(55),
+                Value::Integer(77),
+                Value::Instructions([
+                    make(OpConstant, vec![0]),
+                    make(OpSetLocal, vec![0]),
+                    make(OpConstant, vec![1]),
+                    make(OpSetLocal, vec![1]),
+                    make(OpGetLocal, vec![0]),
+                    make(OpGetLocal, vec![1]),
+                    make(OpAdd, vec![]),
+                    make(OpReturnValue, vec![]),
+                ].concat())
+            ],
+            expected_instructions: vec![
+                make(OpConstant, vec![2]),
                 make(OpPop, vec![]),
             ]
         },

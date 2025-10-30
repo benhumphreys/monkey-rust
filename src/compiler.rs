@@ -2,11 +2,11 @@
 
 use std::cell::RefCell;
 use crate::ast::{BlockStatement, Expression, Program, Statement};
-use crate::code::Opcode::{OpConstant, OpGetGlobal, OpPop, OpReturn, OpReturnValue, OpSetGlobal};
+use crate::code::Opcode::{OpConstant, OpGetGlobal, OpGetLocal, OpPop, OpReturn, OpReturnValue, OpSetGlobal, OpSetLocal};
 use crate::code::{make, Instructions, Opcode};
 use crate::object::Object;
 use crate::object::Object::{CompiledFunction, Integer, StringObject};
-use crate::symbol_table::SymbolTable;
+use crate::symbol_table::{SymbolScope, SymbolTable};
 use std::ops::Deref;
 use std::rc::Rc;
 use Opcode::{OpAdd, OpBang, OpDiv, OpEqual, OpFalse, OpGreaterThan, OpJump, OpJumpNotTruthy, OpMinus, OpMul, OpNotEqual, OpNull, OpSub, OpTrue};
@@ -65,7 +65,10 @@ impl Compiler {
                 self.compile_expression(expression)?;
 
                 let symbol = self.symbol_table.borrow_mut().define(id.value.as_str());
-                self.emit(OpSetGlobal, vec![symbol.index]);
+                match symbol.scope {
+                    SymbolScope::GlobalScope => self.emit(OpSetGlobal, vec![symbol.index]),
+                    SymbolScope::LocalScope => self.emit(OpSetLocal, vec![symbol.index])
+                };
                 Ok(())
             }
             Statement::ReturnStatement(_, expr) => {
@@ -93,7 +96,10 @@ impl Compiler {
                 let maybe_symbol = self.symbol_table.borrow_mut().resolve(value);
                 match maybe_symbol {
                     Some(symbol) => {
-                        self.emit(OpGetGlobal, vec![symbol.index]);
+                        match symbol.scope {
+                            SymbolScope::GlobalScope => self.emit(OpGetGlobal, vec![symbol.index]),
+                            SymbolScope::LocalScope => self.emit(OpGetLocal, vec![symbol.index]),
+                        };
                         Ok(())
                     }
                     None => Err(format!("undefined variable: {}", value))
@@ -335,12 +341,15 @@ impl Compiler {
         let scope = CompilationScope::new();
         self.scopes.push(scope);
         self.scope_index += 1;
+        self.symbol_table = Rc::new(RefCell::new(SymbolTable::new_enclosed_symbol_table(&self.symbol_table)));
     }
 
     pub fn leave_scope(&mut self) -> Instructions {
         let instructions = self.current_instructions().clone();
         self.scopes.pop();
         self.scope_index -= 1;
+        let outer = self.symbol_table.borrow().outer.clone().unwrap();
+        self.symbol_table = outer;
         instructions
     }
 

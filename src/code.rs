@@ -1,4 +1,4 @@
-use crate::code::Opcode::{OpAdd, OpArray, OpBang, OpCall, OpConstant, OpDiv, OpEqual, OpFalse, OpGetGlobal, OpGreaterThan, OpHash, OpIndex, OpJump, OpJumpNotTruthy, OpMinus, OpMul, OpNotEqual, OpNull, OpPop, OpReturn, OpReturnValue, OpSetGlobal, OpSub, OpTrue};
+use crate::code::Opcode::{OpAdd, OpArray, OpBang, OpCall, OpConstant, OpDiv, OpEqual, OpFalse, OpGetGlobal, OpGetLocal, OpGreaterThan, OpHash, OpIndex, OpJump, OpJumpNotTruthy, OpMinus, OpMul, OpNotEqual, OpNull, OpPop, OpReturn, OpReturnValue, OpSetGlobal, OpSetLocal, OpSub, OpTrue};
 use std::fmt;
 use std::fmt::Write;
 
@@ -34,6 +34,8 @@ pub enum Opcode {
     OpReturnValue,
     /// Return to the calling context and resume executing there, but with no explicit return value.
     OpReturn,
+    OpGetLocal,
+    OpSetLocal,
 }
 
 impl Opcode {
@@ -63,6 +65,8 @@ impl Opcode {
             21 => Ok(OpCall),
             22 => Ok(OpReturnValue),
             23 => Ok(OpReturn),
+            24 => Ok(OpGetLocal),
+            25 => Ok(OpSetLocal),
             _ => Err(format!("ERROR: no definition for opcode: {}", ordinal)),
         }
     }
@@ -93,6 +97,8 @@ impl Opcode {
             OpCall => vec![],
             OpReturnValue => vec![],
             OpReturn => vec![],
+            OpGetLocal => vec![1],
+            OpSetLocal => vec![1],
         }
     }
 }
@@ -124,6 +130,8 @@ impl fmt::Display for Opcode {
             OpCall => write!(f, "OpCall"),
             OpReturnValue => write!(f, "OpReturnValue"),
             OpReturn => write!(f, "OpReturn"),
+            OpGetLocal => write!(f, "OpGetLocal"),
+            OpSetLocal => write!(f, "OpSetLocal"),
         }
     }
 }
@@ -144,6 +152,7 @@ pub fn make(op: Opcode, operands: Vec<i32>) -> Vec<u8> {
     for i in 0..operand_widths.len() {
         let width: usize = operand_widths[i] as usize;
         match width {
+            1 => instruction[offset] = operands[i] as u8,
             2 => {
                 instruction[offset] = (operands[i] >> 8) as u8;
                 instruction[offset + 1] = (operands[i] & 0xFF) as u8;
@@ -198,6 +207,7 @@ pub fn read_operands(op: &Opcode, ins: &Instructions) -> (Vec<i32>, usize) {
     for i in 0..operand_widths.len() {
         let width: usize = operand_widths[i] as usize;
         match width {
+            1 => operands[i] = convert_u8_to_i32_be(&ins[offset..offset + 1]),
             2 => operands[i] = convert_u16_to_i32_be(&ins[offset..offset + 2]),
             _ => panic!("Unhandled operand width: {}", width),
         }
@@ -205,6 +215,10 @@ pub fn read_operands(op: &Opcode, ins: &Instructions) -> (Vec<i32>, usize) {
     }
 
     (operands, offset)
+}
+
+pub fn convert_u8_to_i32_be(ins: &[u8]) -> i32 {
+    ins[0] as i32
 }
 
 pub fn convert_u16_to_i32_be(ins: &[u8]) -> i32 {

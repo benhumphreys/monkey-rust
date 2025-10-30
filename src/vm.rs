@@ -202,6 +202,8 @@ impl Vm {
 
                     self.push(&OBJECT_NULL)?;
                 }
+                Opcode::OpGetLocal => {todo!()}
+                Opcode::OpSetLocal => {todo!()}
             }
         }
 

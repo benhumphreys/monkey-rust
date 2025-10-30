@@ -1,13 +1,14 @@
 #![allow(dead_code)]
 
 use monkey::code::{disassemble, make, read_operands, Instructions, Opcode};
-use monkey::code::Opcode::{OpAdd, OpConstant};
+use monkey::code::Opcode::{OpAdd, OpConstant, OpGetLocal};
 
 #[test]
 fn test_make() {
     let test_cases = [
         (OpConstant, vec![65534i32], vec![OpConstant as u8, 255, 254]),
-        (OpAdd, vec![], vec![OpAdd as u8])
+        (OpAdd, vec![], vec![OpAdd as u8]),
+        (OpGetLocal, vec![255], vec![OpGetLocal as u8, 255]),
     ];
 
     for test_case in test_cases {
@@ -26,13 +27,15 @@ fn test_make() {
 fn test_instructions_string() {
     let instructions = [
         make(OpAdd, vec![]),
+        make(OpGetLocal, vec![1]),
         make(OpConstant, vec![2]),
         make(OpConstant, vec![65535]),
     ];
 
     let expected = "0000 OpAdd\n\
-    0001 OpConstant 2\n\
-    0004 OpConstant 65535\n";
+    0001 OpGetLocal 1\n\
+    0003 OpConstant 2\n\
+    0006 OpConstant 65535\n";
 
     let mut concatenated: Instructions = vec![];
     for instruction in instructions {
@@ -49,7 +52,12 @@ fn test_read_operands() {
            op: OpConstant,
            operands: vec![65535],
            bytes_read: 2
-       }
+       },
+        ReadOperandsTestCase {
+           op: OpGetLocal,
+           operands: vec![255],
+           bytes_read: 1
+        }
     ];
 
     for test_case in test_cases {
